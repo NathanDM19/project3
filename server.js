@@ -4,10 +4,11 @@ const server = require('http').createServer(app);
 const io = require('socket.io')(server);
 let userId = 0;
 let totalUsers = 0;
+const PORT = process.env.PORT || 3000
 
 app.use(express.static('public'));
 
-server.listen(4200, () => {
+server.listen(PORT, () => {
   console.log('Webserver listening on port 3000...');
 });
 

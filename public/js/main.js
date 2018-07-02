@@ -1,4 +1,4 @@
-const socket = io.connect('http://localhost:4200');
+const socket = io.connect(window.location.hostname);
 
 // GLOBALS
 let gameEdit;
