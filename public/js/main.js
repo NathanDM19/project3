@@ -22,12 +22,16 @@ let walls = {
   redGroup: "",
   redCounter: 0,
   redArray: [],
+  redSpin: [],
   blue: {},
   blueGroup: "",
   blueCounter: 0,
-  blueArray: []
+  blueArray: [],
+  blueSpin: []
 }
 let testWall;
+let testWall2;
+let testWall3;
 let teamText;
 
 // On connection, emit response to server
@@ -53,7 +57,7 @@ socket.on('userDisconnect', data => {
 // Spawn white wall;
 socket.on('whiteWall', data => {
   console.log("making wall")
-  makeWhiteWall(data.x, data.y, data.scaleX, data.scaleY, walls.whiteCounter);
+  makeWhiteWall(data.x, data.y, data.scaleX, data.scaleY, walls.whiteCounter, data.type);
 });
 // Spawn color walls;
 socket.on('wall', data => {
@@ -82,10 +86,7 @@ var game = new Phaser.Game(config);
 
 function preload() {
   gameEdit = this;
-  this.load.spritesheet('playerRun', '../assets/ninjaRun.png', { frameWidth: 66, frameHeight: 87.5 });
-  this.load.spritesheet('playerIdle', '../assets/ninjaIdle.png', {
-    frameWidth: 46, frameHeight: 88
-  });
+  this.load.multiatlas('ninja', 'assets/ninja.json', 'assets')
   this.load.image('wall', 'assets/platform.png');
   this.load.image('redWall', 'assets/redWall.png');
   this.load.image('blueWall', 'assets/blueWall.png');
@@ -100,7 +101,7 @@ function create() {
   background = this.physics.add.staticGroup();
   const border = this.physics.add.staticGroup();
   walls.whiteGroup = this.physics.add.staticGroup();
-  player = this.physics.add.sprite(690, 320, 'playerIdle');
+  player = this.physics.add.sprite(690, 320, 'ninja', "Idle__000.png").setScale(0.2);
   border.create(700, 100, 'wall').setScale(2.5, 1).refreshBody()
   border.create(700, 600, 'wall').setScale(2.5, 1).refreshBody()
   border.create(184, 350, 'wall').setScale(0.08, 16.64).refreshBody()
@@ -114,32 +115,57 @@ function create() {
   bg2.depth = -0.5;
   bg3.depth = -0.5;
   bg4.depth = -0.5;
-  // player.body.setSize(58, 110);
   this.physics.add.collider(player, walls);
   gameEdit.add.text(200, 20, `Blue Team`, { fontSize: '50px', fill: 'rgb(0, 0, 255)', fontFamily: 'helvetica' });
   gameEdit.add.text(970, 20, 'Red Team', { fontSize: '50px', fill: 'rgb(255, 0, 0)', fontFamily: 'helvetica' })
   teamText = gameEdit.add.text(660, 40, `${team[0].toUpperCase()+ team.slice(1)}`, {fontSize: '30px', fill: team, fontFamily: 'helvetica'})
   this.anims.create({
     key: 'left',
-    frames: this.anims.generateFrameNumbers('playerRun', { start: 0, end: 9 }),
+    frames: this.anims.generateFrameNames('ninja', {
+      start: 0, end: 9, zeroPad: 3,
+      prefix: 'Run__', suffix: '.png'
+    }),
     frameRate: 9,
     repeat: -1
   });
   this.anims.create({
     key: 'turn',
-    frames: [{ key: 'playerIdle', frame: 0 }],
+    frames: [{ key: 'ninja', frame: 'Idle__000.png' }],
     frameRate: 20
   });
   this.anims.create({
     key: 'right',
-    frames: this.anims.generateFrameNumbers('playerRun', { start: 0, end: 9 }),
+    frames: this.anims.generateFrameNames('ninja', {
+      start: 0, end: 9, zeroPad: 3,
+      prefix: 'Run__', suffix: '.png'
+    }),
     frameRate: 9,
     repeat: -1
   });
   cursors = this.input.keyboard.createCursorKeys();
   // Spawning white walls
 }
-
+degree = 0;
+degree2 = 120;
+degree3 = 240;
+window.setInterval(function () {
+  for (key in walls.blue) {
+    if (walls.blue[key].type === 3) {
+      walls.blue[key].degree++
+      walls.blue[key].x = (walls.blue[key].center.x + 80 * Math.cos((walls.blue[key].degree % 360) / 57))
+      walls.blue[key].y = (walls.blue[key].center.y + 80 * Math.sin((walls.blue[key].degree % 360) / 57))
+      walls.blue[key].rotation = (walls.blue[key].degree % 360) / 57
+    }
+  }
+  for (key in walls.red) {
+    if (walls.red[key].type === 3) {
+      walls.red[key].degree++
+      walls.red[key].x = (walls.red[key].center.x + 80 * Math.cos((walls.red[key].degree % 360) / 57))
+      walls.red[key].y = (walls.red[key].center.y + 80 * Math.sin((walls.red[key].degree % 360) / 57))
+      walls.red[key].rotation = (walls.red[key].degree % 360) / 57
+    }
+  }
+}, 20)
 function update() {
   for (let key in playerDetails) {
     // If player has left, remove sprite
@@ -150,7 +176,7 @@ function update() {
       }
     } else {
       if (!playerCreated[key]) {
-        playerSprites[key] = gameEdit.physics.add.sprite(400, 490, 'player');
+        playerSprites[key] = gameEdit.physics.add.sprite(400, 490, 'player').setScale(0.2)
         playerCreated[key] = true
       }
       if (playerSprites[key].x !== playerDetails[key]['x'] || playerSprites[key].y !== playerDetails[key]['y'] || playerDetails[key]['direction'] !== playerDetails[key]['tempDirection']) {
@@ -225,42 +251,74 @@ function update() {
   }
   // BASIC ATTACK
   if (cursors.space.isDown) {
-    player.anims.play('punch')
+    // player.anims.play('punch')
     direction = 'punch'
   }
 
   // Red Wall Movement
   for (key in walls.red) {
     if (walls.red[key]) {
-      if (walls.red[key]['direction'] === "right") {
-        if (walls.red[key].x >= 1204) {
-          walls.red[key]['direction'] = 'left';
+      if (walls.red[key]['type'] === 1) {
+        if (walls.red[key]['direction'] === "right") {
+          if (walls.red[key].x >= 1204) {
+            walls.red[key]['direction'] = 'left';
+          } else {
+            walls.red[key].x += 2;
+          }
         } else {
-          walls.red[key].x += 2;
+          if (walls.red[key].x <= 196) {
+            walls.red[key]['direction'] = 'right';
+          } else {
+            walls.red[key].x -= 2;
+          }
         }
-      } else {
-        if (walls.red[key].x <= 196) {
-          walls.red[key]['direction'] = 'right';
+      } else if (walls.red[key]['type'] === 2) {
+        if (walls.red[key]['direction'] === "right") {
+          if (walls.red[key].y >= 588) {
+            walls.red[key]['direction'] = 'left';
+          } else {
+            walls.red[key].y += 2;
+          }
         } else {
-          walls.red[key].x -= 2;
+          if (walls.red[key].y <= 112) {
+            walls.red[key]['direction'] = 'right';
+          } else {
+            walls.red[key].y -= 2;
+          }
         }
       }
-      walls.red[key].refreshBody()
+      walls.red[key].refreshBody();
     }
   }
   for (key in walls.blue) {
     if (walls.blue[key]) {
-      if (walls.blue[key]['direction'] === "right") {
-        if (walls.blue[key].x >= 1204) {
-          walls.blue[key]['direction'] = 'left';
+      if (walls.blue[key]['type'] === 1) {
+        if (walls.blue[key]['direction'] === "right") {
+          if (walls.blue[key].x >= 1204) {
+            walls.blue[key]['direction'] = 'left';
+          } else {
+            walls.blue[key].x += 2;
+          }
         } else {
-          walls.blue[key].x += 2;
+          if (walls.blue[key].x <= 196) {
+            walls.blue[key]['direction'] = 'right';
+          } else {
+            walls.blue[key].x -= 2;
+          }
         }
-      } else {
-        if (walls.blue[key].x <= 196) {
-          walls.blue[key]['direction'] = 'right';
+      } else if (walls.blue[key]['type'] === 2) {
+        if (walls.blue[key]['direction'] === "right") {
+          if (walls.blue[key].y >= 588) {
+            walls.blue[key]['direction'] = 'left';
+          } else {
+            walls.blue[key].y += 2;
+          }
         } else {
-          walls.blue[key].x -= 2;
+          if (walls.blue[key].y <= 112) {
+            walls.blue[key]['direction'] = 'right';
+          } else {
+            walls.blue[key].y -= 2;
+          }
         }
       }
       walls.blue[key].refreshBody();
@@ -272,17 +330,17 @@ function update() {
     teamText.setStyle({color: team, fontSize: '30px', fontFamily: 'helvetica'})
   }
 }
-const makeWhiteWall = function (x, y, scaleX, scaleY, id) {
+const makeWhiteWall = function (x, y, scaleX, scaleY, id, type) {
   console.log(id)
   walls.white[id] = walls.whiteGroup.create(x, y, 'whiteWall').setScale(scaleX, scaleY).refreshBody();
-  gameEdit.physics.add.overlap(player, walls.white[id], () => capture(walls.white[id].x, walls.white[id].y, 'vertical', id, direction), null, this);
+  gameEdit.physics.add.overlap(player, walls.white[id], () => capture(walls.white[id].x, walls.white[id].y, id, direction, type), null, this);
   walls.whiteCounter++;
 }
-const capture = function (x, y, dir, id, direction) {
+const capture = function (x, y, id, direction, type) {
   walls.white[id].setScale(0)
   walls.white[id].disableBody();
-  spawnColorWall({ team, x, y, dir, id, owner: true, direction })
-  socket.emit('whiteCapture', {team, x, y, dir, id, direction})
+  spawnColorWall({ team, x, y, id, owner: true, direction, type })
+  socket.emit('whiteCapture', {team, x, y, id, direction, type})
 }
 const collide = function (team, wall) {
   if (team !== wall) {
@@ -293,16 +351,47 @@ const spawnColorWall = function (data) {
   console.log(data)
   walls.white[data.id].setScale(0);
   walls.white[data.id].disableBody();
-  walls[data.team][walls[`${data.team}Counter`]] = walls[`${data.team}Group`].create(data.x, data.y, `${data.team}Wall`).setScale(0.02, 40).refreshBody();
-  gameEdit.physics.add.overlap(player, walls[data.team][walls[`${data.team}Counter`]], () => collide(team, data.team), null, this);
-  walls[data.team][walls[`${data.team}Counter`]].depth = -1;
-  walls[data.team][walls[`${data.team}Counter`]].direction = data.direction;
-  walls[`${data.team}Array`].push(walls[`${data.team}Counter`])
+  if (data.type === 1) {
+    walls[data.team][walls[`${data.team}Counter`]] = walls[`${data.team}Group`].create(data.x, data.y, `${data.team}Wall`).setScale(0.02, 40).refreshBody();
+  } else if (data.type === 2) {
+    walls[data.team][walls[`${data.team}Counter`]] = walls[`${data.team}Group`].create(data.x, data.y, `${data.team}Wall`).setScale(5, 0.2).refreshBody();
+  } else if (data.type === 3) {
+    walls[data.team][walls[`${data.team}Counter`]] = walls[`${data.team}Group`].create(data.x, data.y, `${data.team}Wall`).setScale(0.3, 0.2).refreshBody();
+    walls[`${data.team}Counter`]++;
+    walls[data.team][walls[`${data.team}Counter`]] = walls[`${data.team}Group`].create(data.x, data.y, `${data.team}Wall`).setScale(0.3, 0.2).refreshBody();
+    walls[`${data.team}Counter`]++;
+    walls[data.team][walls[`${data.team}Counter`]] = walls[`${data.team}Group`].create(data.x, data.y, `${data.team}Wall`).setScale(0.3, 0.2).refreshBody();
+  }
+  if (data.type === 1 || data.type === 2) {
+    gameEdit.physics.add.overlap(player, walls[data.team][walls[`${data.team}Counter`]], () => collide(team, data.team), null, this);
+    walls[data.team][walls[`${data.team}Counter`]].depth = -1;
+    walls[data.team][walls[`${data.team}Counter`]].direction = data.direction;
+    walls[data.team][walls[`${data.team}Counter`]].type = data.type;
+    walls[`${data.team}Array`].push(walls[`${data.team}Counter`])
+  } else if (data.type === 3) {
+    for (let i = 0; i < 3; i++) {
+      gameEdit.physics.add.overlap(player, walls[data.team][walls[`${data.team}Counter`] - i], () => collide(team, data.team), null, this);
+      walls[data.team][walls[`${data.team}Counter`] - i].depth = -1;
+      walls[data.team][walls[`${data.team}Counter`] - i].direction = data.direction;
+      walls[data.team][walls[`${data.team}Counter`] - i].type = data.type;
+      walls[data.team][walls[`${data.team}Counter`] - i].degree = i * 120 + 120;
+      walls[data.team][walls[`${data.team}Counter`] - i].rotation = i * 120 + 120;
+      walls[data.team][walls[`${data.team}Counter`] - i].center = {x: data.x, y: data.y}
+      walls[`${data.team}Array`].push(walls[`${data.team}Counter`] - i)
+    }
+  }
   window.setTimeout(() => {
-    walls[data.team][walls[`${data.team}Array`][0]].setScale(0);
-    walls[data.team][walls[`${data.team}Array`][0]].disableBody();
-    walls[`${data.team}Array`][0] = undefined;
-    walls[`${data.team}Array`].shift();
+    if (data.type === 1 || data.type === 2) {
+      walls[data.team][walls[`${data.team}Array`][0]].setScale(0);
+      walls[data.team][walls[`${data.team}Array`][0]].disableBody();
+      walls[`${data.team}Array`].shift();
+    } else if (data.type === 3) {
+      for (let i = 0; i < 3; i++) {
+        walls[data.team][walls[`${data.team}Array`][0]].setScale(0);
+        walls[data.team][walls[`${data.team}Array`][0]].disableBody();
+        walls[`${data.team}Array`].shift();
+      }
+    }
     if (data.owner) {
       window.setTimeout(() => {
         socket.emit('whiteCreate');
@@ -312,3 +401,8 @@ const spawnColorWall = function (data) {
   walls[`${data.team}Counter`]++;
 
 }
+// document.ready(
+//   $('#start').click(function() {
+//     socket.emit('start')
+//   })
+// );
