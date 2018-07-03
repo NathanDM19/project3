@@ -4,6 +4,7 @@ const server = require('http').createServer(app);
 const io = require('socket.io')(server);
 let userId = 0;
 let totalUsers = 0;
+let allUsers = {}
 const PORT = process.env.PORT || 3000
 
 app.use(express.static('public'));
@@ -16,7 +17,9 @@ io.on('connection', socket => {
   // Initial connection
   let currentUser = userId;
   console.log(`Connected to user ${userId}`);
-  socket.emit('connection', userId);
+  socket.emit('connection', {currentUser, allUsers});
+  allUsers[userId] = {x: 400, y: 490, direction: 'turn', ability: null};
+  socket.broadcast.emit('userConnect', userId);
   userId++;
   totalUsers++;
   setTimeout(() => {
@@ -32,6 +35,7 @@ io.on('connection', socket => {
     console.log(`User ${currentUser} disconnected`);
     totalUsers--;
     socket.broadcast.emit('userDisconnect', currentUser);
+    delete allUsers[currentUser]
     return;
   })
 
@@ -39,6 +43,8 @@ io.on('connection', socket => {
   socket.on('movement', data => {
     console.log(data)
     socket.broadcast.emit('movement', data)
+    allUsers[data.id].x = data.x
+    allUsers[data.id].y = data.y
   })
 
   // Wall capture
@@ -51,9 +57,14 @@ io.on('connection', socket => {
       io.emit('whiteWall', { x: Math.random() * 900 + 250, y: Math.random() * 380 + 160, scaleX: 0.02, scaleY: 1.5, type: 1 });
     } else if (random > 0.33) {
       io.emit('whiteWall', { x: Math.random() * 900 + 250, y: Math.random() * 380 + 160, scaleX: 0.15, scaleY: 0.25, type: 2 });
-    } else if (random > 0) {
+    } else if (random > 0.16) {
       io.emit('whiteWall', { x: Math.random() * 700 + 350, y: Math.random() * 180 + 260, scaleX: 0.04, scaleY: 0.5, type: 3});
+    } else if (random > 0) {
+      io.emit('whiteWall', { x: Math.random() * 500 + 450, y: Math.random() * 80 + 310, scaleX: 0.06, scaleY: 0.75, type: 4});
     }
+  })
+  socket.on('ability', data => {
+    socket.broadcast.emit('ability', data)
   })
 });
 
