@@ -108,8 +108,8 @@ socket.on('startGame', data => {
     makeWhiteWall(1000, 500, 0.02, 1.5, walls.whiteCounter, 1)
 
   }
-  let timer = 3;
-  let countdownText = gameEdit.add.text(700, 300, '3', { fontSize: '50px', fill: 'rgb(0, 0, 255)', fontFamily: 'helvetica' });
+  let timer = 6;
+  let countdownText = gameEdit.add.text(700, 300, '6', { fontSize: '50px', fill: 'rgb(0, 0, 255)', fontFamily: 'helvetica' });
   let startCounter = window.setInterval(function () {
     timer--;
     countdownText.setText(timer)
@@ -412,6 +412,8 @@ function update() {
       wallMovement('red', key, 196, 1204)
     } else if (walls.red[key].type === 2) {
       wallMovement('red', key, 112, 588)
+    } else {
+      wallMovement('red', key);
     }
   }
   for (key in walls.blue) {
@@ -419,6 +421,8 @@ function update() {
       wallMovement('blue', key, 196, 1204)
     } else if (walls.blue[key].type === 2) {
       wallMovement('blue', key, 112, 588)
+    } else {
+      wallMovement('blue', key);
     }
   }
   // Team identifier
@@ -436,10 +440,10 @@ const makeWhiteWall = function (x, y, scaleX, scaleY, id, type) {
 const capture = function (x, y, id, direction, type) {
   walls.white[id].setScale(0)
   walls.white[id].disableBody();
-  spawnColorWall({ team, x, y, id, owner: true, direction, type })
   socket.emit('whiteCapture', {team, x, y, id, direction, type})
 }
 const collide = function (team, wall) {
+  console.log("el collido")
   if (team !== wall) {
     socket.emit('death', team);
     player.disableBody();
@@ -468,40 +472,31 @@ const spawnColorWall = function (data) {
       walls[data.team][walls[`${data.team}Counter`] + i].type = data.type;
       walls[data.team][walls[`${data.team}Counter`] + i].degree = i * 120 + 120;
       walls[data.team][walls[`${data.team}Counter`] + i].rotation = i * 120 + 120;
-      walls[data.team][walls[`${data.team}Counter`] + i].center = {x: data.x, y: data.y}
+      walls[data.team][walls[`${data.team}Counter`] + i].center = { x: data.x, y: data.y }
       walls[`${data.team}Array`].push(walls[`${data.team}Counter`] + i)
     }
     walls[`${data.team}Counter`] += 2;
   }
   window.setTimeout(() => {
-    let total = 0;
-    let cancel = false;
-    if (data.type === 1 || data.type === 2) {
-      total = 1;
-    } else if (data.type === 3 || data.type === 4) {
-      total = 3;
-    }
-    for (let i = 0; i < total; i++) {
-      if (walls[data.team][key]) {
-        walls[data.team][key].setScale(0);
-        walls[data.team][walls[`${data.team}Array`][0]].disableBody();
-        delete walls[data.team][walls[`${data.team}Array`][0]]
-        walls[`${data.team}Array`].shift();
-      } else {
-        cancel = true;
-        break;
+    if (activeGame) {
+      console.log(data)
+      let total = 0;
+      if (data.type === 1 || data.type === 2) {
+        total = 1;
+      } else if (data.type === 3 || data.type === 4) {
+        total = 3;
       }
-    }
-    if (data.owner) {
-      window.setTimeout(() => {
-        if (!cancel) {
-          socket.emit('whiteCreate');
+      for (let i = 0; i < total; i++) {
+        if (walls[data.team][walls[`${data.team}Array`][0]]) {
+          walls[data.team][walls[`${data.team}Array`][0]].setScale(0);
+          walls[data.team][walls[`${data.team}Array`][0]].disableBody();
+          delete walls[data.team][walls[`${data.team}Array`][0]]
+          walls[`${data.team}Array`].shift();
         }
-      }, 2000)
+      }
     }
   }, 5000);
   walls[`${data.team}Counter`]++;
-
 }
 // Spinning walls interval
 window.setInterval(function () {
