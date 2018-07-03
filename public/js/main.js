@@ -1,5 +1,5 @@
-// const socket = io.connect(window.location.hostname);
-const socket = io.connect("http://localhost:3000")
+const socket = io.connect(window.location.hostname);
+// const socket = io.connect("http://localhost:3000")
 
 // GLOBALS
 let gameEdit;
