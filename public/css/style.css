@@ -1,0 +1,107 @@
+  body {
+    position: relative;
+    font-family: helvetica;
+    background: black;
+  }
+  canvas {
+    display: none;
+  }
+  #firstDiv {
+    width: 100%;
+    height: 100%;
+    text-align: center;
+  }
+  #secondDiv {
+    width: 100%;
+    height: 100%;
+    text-align: center;
+    display: none;
+  }
+  #logo {
+    margin-top: 50px;
+  }
+  .mainText {
+    font-size: 40px;
+    color: white;
+  }
+  #nameText {
+    width: 400px;
+    height: 50px;
+    font-size: 40px;
+    text-align: center;
+  }
+  #continueButton {
+    margin: 40px auto;
+    width: 200px; 
+    height: 60px;
+    border: 2px solid white;
+  }
+  #continueButton:hover {
+    cursor: pointer;
+  }
+  #continue {
+    margin: 8px;
+  }
+  #chooseTeam {
+    margin-bottom: -15px;
+  }
+  #blueDiv {
+    width: 49%;
+    display: inline-block;
+    vertical-align: top;
+  }
+  #blueDivInner {
+    width: 30%;
+    margin: 0 auto;
+    padding-bottom: 0;
+  }
+  #blue {
+    font-size: 40px !important;
+    border-bottom: 2px solid blue;
+    padding-bottom: 5px;
+
+  }
+  #blue:hover {
+    cursor: pointer
+  }
+  #redDiv {
+    width: 49%;
+    display: inline-block;
+    vertical-align: top;
+  }
+  #redDivInner {
+    width: 30%;
+    margin: 0 auto;
+  }
+  #red {
+    font-size: 40px !important;
+    border-bottom: 2px solid red;
+    padding-bottom: 5px;
+  }
+  #red:hover {
+    cursor: pointer;
+  }
+  .blue {
+    color: blue;
+    font-size: 30px;
+  }
+  .red {
+    color: red;
+    font-size: 30px;
+  }
+#readyButton {
+  position: absolute;
+  border: 2px solid white;
+  height: 60px;
+  width: 150px;  
+  padding: 0;
+}  
+#ready {
+  margin-top: 8px;
+}
+#readyButton:hover {
+  cursor: pointer;
+}
+#totalReady {
+  position: absolute;
+}

@@ -4,7 +4,13 @@ const server = require('http').createServer(app);
 const io = require('socket.io')(server);
 let userId = 0;
 let totalUsers = 0;
-let allUsers = {}
+let totalReady = 0;
+let allUsers = {};
+let users = {};
+let startingPositions2 = { blue: { x: 300, y: 360 }, red: { x: 1100, y: 360 } };
+let startingPositions4 = { blue: [{ x: 300, y: 220 }, { x: 300, y: 510 }], red: [{ x: 1100, y: 220 }, { x: 1100, y: 510 }] };
+
+let teams = { red: {}, blue: {} };
 const PORT = process.env.PORT || 3000
 
 app.use(express.static('public'));
@@ -23,13 +29,40 @@ io.on('connection', socket => {
   userId++;
   totalUsers++;
   setTimeout(() => {
-    socket.emit('whiteWall', { x: 400, y: 200, scaleX: 0.02, scaleY: 1.5, type: 1 })
-    socket.emit('whiteWall', { x: 400, y: 500, scaleX: 0.15, scaleY: 0.25, type: 2 })
-    socket.emit('whiteWall', { x: 1000, y: 200, scaleX: 0.15, scaleY: 0.25, type: 2 })
-    socket.emit('whiteWall', { x: 1000, y: 500, scaleX: 0.02, scaleY: 1.5, type: 1 })
+    // socket.emit('whiteWall', { x: 400, y: 200, scaleX: 0.02, scaleY: 1.5, type: 1 })
+    // socket.emit('whiteWall', { x: 400, y: 500, scaleX: 0.15, scaleY: 0.25, type: 2 })
+    // socket.emit('whiteWall', { x: 1000, y: 200, scaleX: 0.15, scaleY: 0.25, type: 2 })
+    // socket.emit('whiteWall', { x: 1000, y: 500, scaleX: 0.02, scaleY: 1.5, type: 1 })
   }, 1000);
 
-
+  // Team join
+  socket.on('teamJoin', data => {
+    if (data.team === "blue") {
+      teams.blue[data.id] = data.name
+    } else if (data.team === "red") {
+      teams.red[data.id] = data.name
+    }
+    socket.broadcast.emit('teamJoin', data);
+  })
+  socket.on('ready', data => {
+    totalReady++;
+    users[data.id] = data.team
+    io.emit('ready', {totalReady, totalUsers });
+    if (totalReady === totalUsers) {
+      if (totalUsers === 2) {
+        io.emit('startGame', { startingPositions2, users })
+      } else if (totalUsers === 4) {
+        io.emit('startGame', { startingPositions4, users })
+      }
+      io.emit('whiteWall', { x: 400, y: 200, scaleX: 0.02, scaleY: 1.5, type: 1 })
+      io.emit('whiteWall', { x: 400, y: 500, scaleX: 0.15, scaleY: 0.25, type: 2 })
+      io.emit('whiteWall', { x: 1000, y: 200, scaleX: 0.15, scaleY: 0.25, type: 2 })
+      io.emit('whiteWall', { x: 1000, y: 500, scaleX: 0.02, scaleY: 1.5, type: 1 })
+    }
+  })
+  socket.on('joinedLobby', data => {
+    socket.emit('ready', { totalReady, totalUsers });
+  });
   // Disconenct
   socket.on('disconnect', (data) => {
     console.log(`User ${currentUser} disconnected`);
@@ -46,7 +79,14 @@ io.on('connection', socket => {
     allUsers[data.id].x = data.x
     allUsers[data.id].y = data.y
   })
-
+  socket.on('death', team => {
+    if (team === "red") {
+      io.emit('point', 'blue')
+    } else if (team === "blue") {
+      io.emit('point', 'red')
+    }
+    io.emit('startGame', { startingPositions2, users, newRound: true })
+  })
   // Wall capture
   socket.on('whiteCapture', data => {
     socket.broadcast.emit('wall', data);

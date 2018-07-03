@@ -1,26 +1,23 @@
-const socket = io.connect(window.location.hostname);
-// const socket = io.connect("http://localhost:3000")
+// const socket = io.connect(window.location.hostname);
+const socket = io.connect("http://localhost:3000")
 
 // GLOBALS
-let gameEdit;
+let gameEdit, player, ability, playerNameText, directionTemp, teamText, name, ready;
+let team = "nutin";
 let id = null;
-let player;
+let activeGame = false;
 let playerAbility = { used: false, cooldown: 0, barNum: 0, bar: "", barBack: "", type: "main"};
-let ability;
-let playerNameText;
 let playerDetails = {};
 let playerCreated = {};
 let playerSprites = {};
 let playerNames = {};
 let playerAbilities = {};
-let score = { blue: 0, red: 0 };
+let score = { blue: 0, red: 0, blueText: null, redText: null };
 let x = 0;
 let y = 0;
 let xTemp = 0;
 let yTemp = 0;
 let direction = 'turn'
-let directionTemp;
-let team = 'blue';
 let walls = {
   white: {},
   whiteGroup: "",
@@ -38,7 +35,6 @@ let walls = {
   blueCounter: 0,
   blueArray: [],
 }
-let teamText;
 
 // On connection, emit response to server
 socket.on('connect', () => {
@@ -61,11 +57,81 @@ socket.on('movement', data => {
   playerDetails[data.id].y = data.y
   playerDetails[data.id].direction = data.direction
 })
+socket.on('startGame', data => {
+  player.disableBody();
+  playerAbility.barNum = 0;
+  activeGame = false;
+  for (key in walls.blue) {
+    walls.blue[key]
+    walls.blue[key].setScale(0);
+    walls.blue[key].disableBody();
+    delete walls.blue[key]
+    walls.blueArray.shift();
+  }
+  for (key in walls.red) {
+    walls.red[key]
+    walls.red[key].setScale(0);
+    walls.red[key].disableBody();
+    delete walls.red[key]
+    walls.redArray.shift();
+  }
+  for (key in walls.white) {
+    walls.white[key]
+    walls.white[key].setScale(0);
+    walls.white[key].disableBody();
+    delete walls.white[key]
+  }
+  walls.redCounter = 0;
+  walls.blueCounter = 0;
+  walls.whiteCounter = 0;
+  player.x = data.startingPositions2[team].x
+  player.y = data.startingPositions2[team].y
+  console.log("Placing player at", data.startingPositions2[team].x, data.startingPositions2[team].y)
+  for (key in data.users) {
+    if (key != id) {
+      playerSprites[parseInt(key)].x = data.startingPositions2[data.users[key]].x
+      playerSprites[parseInt(key)].y = data.startingPositions2[data.users[key]].y
+      playerAbilities[key].bar.x = playerSprites[key].x - ((100 - playerAbilities[key].barNum) / 3)
+      playerAbilities[key].bar.y = playerSprites[key].y - 46;
+      playerAbilities[key].bar.setScale(playerAbilities[key].barNum / 50, 0.5)
+      playerAbilities[key].barBack.x = playerSprites[key].x;
+      playerAbilities[key].barBack.y = playerSprites[key].y - 46;
+      playerAbilities[key].barNum = 0;
+    }
+  }
+  $('#secondDiv').css({ display: 'none' });
+  $('canvas').css({ display: "block" });
+  if (data.newRound) {
+    makeWhiteWall(400, 200, 0.02, 1.5, walls.whiteCounter, 1);
+    makeWhiteWall(400, 500, 0.15, 0.25, walls.whiteCounter, 2)
+    makeWhiteWall(1000, 200, 0.15, 0.25, walls.whiteCounter, 2)
+    makeWhiteWall(1000, 500, 0.02, 1.5, walls.whiteCounter, 1)
+
+  }
+  let timer = 3;
+  let countdownText = gameEdit.add.text(700, 300, '3', { fontSize: '50px', fill: 'rgb(0, 0, 255)', fontFamily: 'helvetica' });
+  let startCounter = window.setInterval(function () {
+    timer--;
+    countdownText.setText(timer)
+    if (timer === 0) {
+      player.enableBody(true, data.startingPositions2[team].x, data.startingPositions2[team].y);
+      countdownText.setText("")
+      window.clearInterval(startCounter)
+      activeGame = true;
+    }
+  }, 1000)
+})
 // User disconnects
 socket.on('userDisconnect', data => {
   playerDetails[data] = 'disconnected';
 });
-
+socket.on('ready', data => {
+  $('#totalReady').text(`${data.totalReady} / ${data.totalUsers} Ready`)
+})
+socket.on('point', team => {
+  score[team]++;
+  score[`${team}Text`].setText(score[team]);
+})
 // Spawn white wall;
 socket.on('whiteWall', data => {
   console.log("making wall")
@@ -136,6 +202,7 @@ function create() {
   ability = this.physics.add.staticGroup();
   player = this.physics.add.sprite(690, 320, 'ninja', "Idle__000.png").setScale(0.15);
   playerNameText = this.add.text(200, 200, `Player ${id}`, { fontSize: '12px', fill: '#FFF', fontFamily: "helvetica" });
+  player.disableBody();
   playerAbility.barBack = ability.create(100, 100, 'abilityBarBack').setScale(2, 0.5).refreshBody();
   playerAbility.bar = ability.create(100, 100, 'abilityBar').setScale(2, 0.5).refreshBody()
   playerNameText.depth = 1;
@@ -150,8 +217,8 @@ function create() {
 
   bg1.depth = bg2.depth = bg3.depth = bg4.depth = -0.5;
   this.physics.add.collider(player, walls);
-  gameEdit.add.text(390, 20, '0', { fontSize: '50px', fill: 'rgb(0, 0, 255)', fontFamily: 'helvetica' });
-  gameEdit.add.text(1000, 20, '0', { fontSize: '50px', fill: 'rgb(255, 0, 0)', fontFamily: 'helvetica' })
+  score.blueText = gameEdit.add.text(390, 20, '0', { fontSize: '50px', fill: 'rgb(0, 0, 255)', fontFamily: 'helvetica' });
+  score.redText = gameEdit.add.text(1000, 20, '0', { fontSize: '50px', fill: 'rgb(255, 0, 0)', fontFamily: 'helvetica' })
   teamText = gameEdit.add.text(660, 40, `${team[0].toUpperCase()+ team.slice(1)}`, {fontSize: '30px', fill: team, fontFamily: 'helvetica'})
   this.anims.create({
     key: 'left',
@@ -238,6 +305,7 @@ function update() {
   } else if (player.x <= 212) {
     player.x = 1187.9;
   } else if (player.x >= 1188) {
+    console.log(player.x)
     player.x = 212.1;
   }
   if (x > xTemp + 2 || x < xTemp - 2 || y > yTemp + 2 || y < yTemp - 2 || direction !== directionTemp) {
@@ -373,6 +441,7 @@ const capture = function (x, y, id, direction, type) {
 }
 const collide = function (team, wall) {
   if (team !== wall) {
+    socket.emit('death', team);
     player.disableBody();
   }
 }
@@ -406,20 +475,27 @@ const spawnColorWall = function (data) {
   }
   window.setTimeout(() => {
     let total = 0;
+    let cancel = false;
     if (data.type === 1 || data.type === 2) {
       total = 1;
     } else if (data.type === 3 || data.type === 4) {
       total = 3;
     }
     for (let i = 0; i < total; i++) {
-      walls[data.team][walls[`${data.team}Array`][0]].setScale(0);
-      walls[data.team][walls[`${data.team}Array`][0]].disableBody();
-      delete walls[data.team][walls[`${data.team}Array`][0]]
-      walls[`${data.team}Array`].shift();
+      if (walls[data.team][key]) {
+        walls[data.team][key].setScale(0);
+        walls[data.team][walls[`${data.team}Array`][0]].disableBody();
+        delete walls[data.team][walls[`${data.team}Array`][0]]
+        walls[`${data.team}Array`].shift();
+      } else {
+        cancel = true;
+      }
     }
     if (data.owner) {
       window.setTimeout(() => {
-        socket.emit('whiteCreate');
+        if (!cancel) {
+          socket.emit('whiteCreate');
+        }
       }, 2000)
     }
   }, 5000);
@@ -459,32 +535,68 @@ window.setInterval(function () {
 }, 20)
 // Ability cooldown
 window.setInterval(function () {
-  if (playerAbility.cooldown > 0) {
-    playerAbility.cooldown -= 0.5;
-  }
-}, 500)
-window.setInterval(function() {
-  if (playerAbility.barNum < 100 && playerAbility.type === "main") {
-    playerAbility.barNum++;
-  }
-  for (key in playerAbilities) {
-    if (playerAbilities[key].barNum < 100 && playerAbilities[key].type === "main") {
-      playerAbilities[key].barNum++;
+  if (activeGame) {
+    if (playerAbility.barNum < 100 && playerAbility.type === "main") {
+      playerAbility.barNum++;
+    }
+    for (key in playerAbilities) {
+      if (playerAbilities[key].barNum < 100 && playerAbilities[key].type === "main") {
+        playerAbilities[key].barNum++;
+      }
     }
   }
 }, 100);
 window.setInterval(function () {
-  if (playerAbility.barNum < 100 && playerAbility.type === "use") {
-    playerAbility.barNum++;
-  }
-  for (key in playerAbilities) {
-    if (playerAbilities[key].barNum < 100 && playerAbilities[key].type === "use") {
-      playerAbilities[key].barNum++;
+  if (activeGame) {
+    if (playerAbility.barNum < 100 && playerAbility.type === "use") {
+      playerAbility.barNum++;
+    }
+    for (key in playerAbilities) {
+      if (playerAbilities[key].barNum < 100 && playerAbilities[key].type === "use") {
+        playerAbilities[key].barNum++;
+      }
     }
   }
 }, 15)
-// document.ready(
-//   $('#start').click(function() {
-//     socket.emit('start')
-//   })
-// );
+// document.getElementsByTagName('canvas')[1]
+$(document).ready(function() {
+  $('#continueButton').click(function () {
+    name = $('#nameText').val();
+    $('#firstDiv').css({ display: 'none' });
+    $('#secondDiv').css({ display: 'block' });
+    $('#readyButton').css({ top: `${window.innerHeight - 200}px`, left: `${window.innerWidth/2 - 80}px` })
+    $('#totalReady').css({ top: `${window.innerHeight - 150}px`, left: `${window.innerWidth / 2 - 100}px` });
+    socket.emit('joinedLobby', id);
+  })
+  $('#blue').click(function () {
+    if (!ready) {
+      $(`.${name}`).remove();
+      team = "blue"
+      $('#blueList').append($(`<p class="blue ${name}">${name}</p>`))
+      socket.emit('teamJoin', { name, id, team: 'blue' })
+    }
+  })
+  $('#red').click(function () {
+    if (!ready) {
+      $(`.${name}`).remove();
+      team = "red"
+      $('#redList').append($(`<p class="red ${name}">${name}</p>`))
+      socket.emit('teamJoin', { name, id, team: 'red' })
+    }
+  })
+  $('#readyButton').click(function () {
+    if (!ready && team !== "nutin") {
+      socket.emit('ready', { id, team });
+      ready = true;
+    }
+  })
+})
+socket.on('teamJoin', data => {
+  if (data.team === "blue") {
+    $(`.${data.name}`).remove();
+    $('#blueList').append($(`<p class="blue ${data.name}">${data.name}</p>`))
+  } else if (data.team === "red") {
+    $(`.${data.name}`).remove();
+    $('#redList').append($(`<p class="red ${data.name}">${data.name}</p>`))
+  }
+})

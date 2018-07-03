@@ -8,16 +8,45 @@
   <script src="js/phaser.js"></script>
   <script src="js/jq.js"></script>
   <script src="/socket.io/socket.io.js"></script>
+  <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-  <button id="start">Start</button>
-  <canvas id="renderCanvas" touch-action="none"></canvas>
+  <div id="firstDiv">
+    <img id="logo" src="assets/logo.png">
+    <p class="mainText">Enter your name</p>
+    <input id="nameText" type="text">
+    <div id="continueButton">
+      <p id="continue" class="mainText">
+        Continue
+      </p>
+    </div>
+  </div>
+  <div id="secondDiv">
+<div></div>    
+<div></div>
+    <img id="logo" src="assets/logo.png">
+    <p id="chooseTeam" class="mainText">Choose your team</p>
+    <div id="blueDiv">
+      <div id="blueDivInner">
+        <p class="blue" id="blue">Blue</p>
+        <div class="blue" id="blueList">
+
+        </div>
+      </div>
+    </div>
+    <div id="redDiv">
+      <div id="redDivInner">
+        <p class="red" id="red">Red</p>
+        <div class="red" id="redList">
+
+        </div>
+      </div>
+    </div>
+    <div id="readyButton">
+      <p id="ready" class="mainText">Ready</p>
+    </div>
+    <p id="totalReady" class="mainText">0 / 0 Ready</p>
+  </div>
   <script src="js/main.js"></script>
 </body>
-<style>
-  body {
-    position: relative;
-    top: -150px;
-  }
-</style>
 </html>
