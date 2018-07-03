@@ -49,6 +49,7 @@ io.on('connection', socket => {
     users[data.id] = data.team
     io.emit('ready', {totalReady, totalUsers });
     if (totalReady === totalUsers) {
+      totalReady = 0;
       if (totalUsers === 2) {
         io.emit('startGame', { startingPositions2, users })
       } else if (totalUsers === 4) {
