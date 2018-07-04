@@ -477,7 +477,7 @@ const capture = function (x, y, id, direction, type) {
   socket.emit('whiteCapture', {team, x, y, id, direction, type})
 }
 const collide = function (team, wall) {
-  console.log("el collido")
+  // console.log("el collido")
   if (team !== wall) {
     socket.emit('death', team);
     player.disableBody();
