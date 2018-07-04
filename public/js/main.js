@@ -1,5 +1,5 @@
-const socket = io.connect(window.location.hostname);
-// const socket = io.connect("http://localhost:3000")
+// const socket = io.connect(window.location.hostname);
+const socket = io.connect("http://localhost:3000")
 
 // GLOBALS
 let gameEdit, player, ability, playerNameText, directionTemp, teamText, name, ready;
@@ -218,13 +218,21 @@ function preload() {
   this.load.multiatlas('ninja', 'assets/ninja.json', 'assets');
   this.load.multiatlas('robot', 'assets/robot.json', 'assets');
   this.load.image('wall', 'assets/platform.png');
-  this.load.image('redWall', 'assets/redWall.png');
-  this.load.image('blueWall', 'assets/blueWall.png');
-  this.load.image('whiteWall', 'assets/whiteWall.png');
+  this.load.image('redWall', 'assets/Red_laser.png');
+  this.load.image('redWallUp', 'assets/Red_laser_up.png')
+  this.load.image('blueWall', 'assets/Blue_laser.png');
+  this.load.image('blueWallUp', 'assets/Blue_laser_up.png')
+  this.load.image('whiteWall', 'assets/Green_laser.png');
+  this.load.image('whiteWallUp', '/assets/Green_laser_up.png')
+  this.load.image('whiteWallCircle', '/assets/Green_laser_circle.png')
   this.load.image('background', 'assets/black.png');
   this.load.image('ability', 'assets/ability.png')
   this.load.image('abilityBar', 'assets/abilityBar.png')
   this.load.image('abilityBarBack', 'assets/abilityBarBack.png')
+  this.load.image('arena', 'assets/arena.bmp');
+  this.load.image('leftArena', 'assets/leftArena.png');
+  this.load.image('topArena', 'assets/topArena.png')
+  this.load.image('bottomArena', 'assets/bottomArena.png')
 }
 function create() {
   // Creating player and walls
@@ -234,12 +242,26 @@ function create() {
   const border = this.physics.add.staticGroup();
   walls.whiteGroup = this.physics.add.staticGroup();
   ability = this.physics.add.staticGroup();
+  let arena = background.create(442, 220, 'arena').setScale(1.008, 1.01).refreshBody();
+  let leftArena = background.create(-600, 205, 'leftArena').setScale(1, 1.005).refreshBody();
+  let topArena = background.create(442, -484, 'topArena').setScale(1.008, 1).refreshBody()
+  let bottomArena = background.create(974, 1184, 'bottomArena').setScale(1.008, 1).refreshBody();
+  let rightArena = background.create(2000, 205, 'leftArena').setScale(1,1.005).refreshBody()
+  bottomArena.depth = 0.1;
+  topArena.depth = 0.1;
+  leftArena.depth = 0.1;
+  rightArena.depth = 0.1;
+  rightArena.flipX = true;
+  arena.depth = -2;
   player = this.physics.add.sprite(690, 320, 'ninja', "Idle__000.png").setScale(0.15);
+  player.depth = 10;
   playerNameText = this.add.text(200, 200, `Player ${id}`, { fontSize: '12px', fill: '#FFF', fontFamily: "helvetica" });
   player.disableBody();
   playerAbility.barBack = ability.create(100, 100, 'abilityBarBack').setScale(2, 0.5).refreshBody();
+  playerAbility.barBack.depth = 1;
   playerAbility.bar = ability.create(100, 100, 'abilityBar').setScale(2, 0.5).refreshBody()
-  playerNameText.depth = 1;
+  playerAbility.bar.depth = 2;
+  playerNameText.depth = 2;
   border.create(700, 100, 'wall').setScale(2.5, 1).refreshBody();
   border.create(700, 600, 'wall').setScale(2.5, 1).refreshBody();
   border.create(184, 350, 'wall').setScale(0.08, 16.64).refreshBody()
@@ -249,7 +271,7 @@ function create() {
   let bg3 = background.create(1300, 350, 'background').setScale(0.1, 1).refreshBody(); 
   let bg4 = background.create(700, 684, 'background').setScale(1, 0.1).refreshBody(); 
 
-  bg1.depth = bg2.depth = bg3.depth = bg4.depth = -0.5;
+  bg1.depth = bg2.depth = bg3.depth = bg4.depth =  -0.5;
   this.physics.add.collider(player, walls);
   score.blueText = gameEdit.add.text(390, 20, '0', { fontSize: '50px', fill: 'rgb(0, 0, 255)', fontFamily: 'helvetica' });
   score.redText = gameEdit.add.text(1000, 20, '0', { fontSize: '50px', fill: 'rgb(255, 0, 0)', fontFamily: 'helvetica' })
@@ -298,11 +320,15 @@ function update() {
     } else {
       if (!playerCreated[key]) {
         playerSprites[key] = gameEdit.physics.add.sprite(400, 490, 'player').setScale(0.15)
+        playerSprites[key].depth = 10;
         playerCreated[key] = true
         playerNames[key] = gameEdit.add.text(100, 100, `Player ${key}`, { fontSize: '12px', fill: '#FFF', fontFamily: 'Helvetica' });
+        playerNames[key].depth = 2;
         playerAbilities[key] = {};
         playerAbilities[key].barBack = ability.create(100, 100, 'abilityBarBack').setScale(2, 0.5).refreshBody();
+        playerAbilities[key].barBack.depth = 1;
         playerAbilities[key].bar = ability.create(100, 100, 'abilityBar').setScale(2, 0.5).refreshBody();
+        playerAbilities[key].bar.depth = 2;
         playerAbilities[key].barNum = 0;
         playerAbilities[key].type = "main";
       }
@@ -341,14 +367,14 @@ function update() {
   playerAbility.bar.setScale(playerAbility.barNum / 50, 0.5)
   playerAbility.barBack.x = player.x;
   playerAbility.barBack.y = player.y - 46;
-  if (player.y <= 137) {
-    player.y = 562.9;
-  } else if (player.y >= 563) {
-    player.y = 137.1;
-  } else if (player.x <= 212) {
-    player.x = 1187.9;
-  } else if (player.x >= 1188) {
-    player.x = 212.1;
+  if (player.y <= 132) {
+    player.y = 549.9
+  } else if (player.y >= 550) {
+    player.y = 132.1;
+  } else if (player.x <= 225) {
+    player.x = 1180.9;
+  } else if (player.x >= 1181) {
+    player.x = 225.1;
   }
   if (x > xTemp + 2 || x < xTemp - 2 || y > yTemp + 2 || y < yTemp - 2 || direction !== directionTemp) {
     x = Math.round(x);
@@ -495,7 +521,15 @@ function update() {
   }
 }
 const makeWhiteWall = function (x, y, scaleX, scaleY, id, type) {
-  walls.white[id] = walls.whiteGroup.create(x, y, 'whiteWall').setScale(scaleX, scaleY).refreshBody();
+  if (type === 1) {
+    walls.white[id] = walls.whiteGroup.create(x, y, 'whiteWallUp').setScale(0.23, 0.16).refreshBody();
+  } else if (type === 2) {
+    walls.white[id] = walls.whiteGroup.create(x, y, 'whiteWall').setScale(0.16, 0.23).refreshBody();
+  } else if (type === 3) {
+    walls.white[id] = walls.whiteGroup.create(x, y, 'whiteWallCircle').setScale(1).refreshBody();
+  } else if (type === 4) {
+    walls.white[id] = walls.whiteGroup.create(x, y, 'whiteWall').setScale(0.08, 0.46).refreshBody();
+  }
   gameEdit.physics.add.overlap(player, walls.white[id], () => capture(walls.white[id].x, walls.white[id].y, id, direction, type), null, this);
   walls.whiteCounter++;
 }
@@ -517,9 +551,9 @@ const spawnColorWall = function (data) {
   walls.white[data.id].disableBody();
   if (data.type === 1 || data.type === 2) {
     if (data.type === 1) {
-      walls[data.team][walls[`${data.team}Counter`]] = walls[`${data.team}Group`].create(data.x, data.y, `${data.team}Wall`).setScale(0.02, 40).refreshBody();
+      walls[data.team][walls[`${data.team}Counter`]] = walls[`${data.team}Group`].create(data.x, data.y, `${data.team}WallUp`).setScale(0.25, 2).refreshBody();
     } else if (data.type === 2) {
-      walls[data.team][walls[`${data.team}Counter`]] = walls[`${data.team}Group`].create(data.x, data.y, `${data.team}Wall`).setScale(5, 0.2).refreshBody();
+      walls[data.team][walls[`${data.team}Counter`]] = walls[`${data.team}Group`].create(data.x, data.y, `${data.team}Wall`).setScale(5, 0.25).refreshBody();
     }
     gameEdit.physics.add.overlap(player, walls[data.team][walls[`${data.team}Counter`]], () => collide(team, data.team), null, this);
     walls[data.team][walls[`${data.team}Counter`]].depth = -1;
@@ -528,7 +562,7 @@ const spawnColorWall = function (data) {
     walls[`${data.team}Array`].push(walls[`${data.team}Counter`])
   } else if (data.type === 3 || data.type === 4) {
     for (let i = 0; i < 3; i++) {
-      walls[data.team][walls[`${data.team}Counter`] + i] = walls[`${data.team}Group`].create(data.x, data.y, `${data.team}Wall`).setDisplaySize(100, 10).refreshBody();
+      walls[data.team][walls[`${data.team}Counter`] + i] = walls[`${data.team}Group`].create(data.x, data.y, `${data.team}Wall`).setScale(0.25, 0.35).refreshBody();
       gameEdit.physics.add.overlap(player, walls[data.team][walls[`${data.team}Counter`] + i], () => collide(team, data.team), null, this);
       walls[data.team][walls[`${data.team}Counter`] + i].depth = -1;
       walls[data.team][walls[`${data.team}Counter`] + i].direction = data.direction;

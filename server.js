@@ -53,8 +53,8 @@ io.on('connection', socket => {
       } else if (totalUsers === 4) {
         io.emit('startGame', { startingPositions4, users, teams })
       }
-      io.emit('whiteWall', { x: 400, y: 200, scaleX: 0.02, scaleY: 1.5, type: 1 })
-      io.emit('whiteWall', { x: 400, y: 500, scaleX: 0.15, scaleY: 0.25, type: 2 })
+      io.emit('whiteWall', { x: 400, y: 200, scaleX: 0.02, scaleY: 1.5, type: 2 })
+      io.emit('whiteWall', { x: 400, y: 500, scaleX: 0.15, scaleY: 0.25, type: 1 })
       io.emit('whiteWall', { x: 1000, y: 200, scaleX: 0.15, scaleY: 0.25, type: 2 })
       io.emit('whiteWall', { x: 1000, y: 500, scaleX: 0.02, scaleY: 1.5, type: 1 })
     }
@@ -106,9 +106,12 @@ io.on('connection', socket => {
       }
     }, 7000);
   })
-  // socket.on('whiteCreate', () => {
-
-  // })
+  socket.on('reset', () => {
+    currentRound = 0;
+    allUsers = {};
+    users = {}
+    teams = { red: { }, blue: { } };
+  })
   socket.on('ability', data => {
     socket.broadcast.emit('ability', data)
   })
