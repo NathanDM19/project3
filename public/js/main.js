@@ -1,12 +1,13 @@
-const socket = io.connect(window.location.hostname);
-// const socket = io.connect("http://localhost:3000")
+// const socket = io.connect(window.location.hostname);
+const socket = io.connect("http://localhost:3000")
 
 // GLOBALS
 let gameEdit, player, ability, playerNameText, directionTemp, teamText, name, ready;
 let team = "nutin";
 let id = null;
 let activeGame = false;
-let playerAbility = { used: false, cooldown: 0, barNum: 0, bar: "", barBack: "", type: "main"};
+let currentRound = 0;
+let playerAbility = { cooldown: 0, barNum: 0, bar: "", barBack: "", type: "main"};
 let playerDetails = {};
 let playerCreated = {};
 let playerSprites = {};
@@ -38,7 +39,6 @@ let walls = {
 
 // On connection, emit response to server
 socket.on('connect', () => {
-  console.log("Connected!");
 });
 // Setting id for user
 socket.on('connection', data => {
@@ -58,9 +58,25 @@ socket.on('movement', data => {
   playerDetails[data.id].direction = data.direction
 })
 socket.on('startGame', data => {
+  currentRound++;
   player.disableBody();
   playerAbility.barNum = 0;
   activeGame = false;
+  playerNameText.setText(name)
+  for (key in data.teams.red) {
+    for (names in playerNames) {
+      if (key === names) {
+        playerNames[names].setText(data.teams.red[key])
+      }
+    }
+  }
+  for (key in data.teams.blue) {
+    for (names in playerNames) {
+      if (key === names) {
+        playerNames[names].setText(data.teams.blue[key])
+      }
+    }
+  }
   for (key in walls.blue) {
     walls.blue[key]
     walls.blue[key].setScale(0);
@@ -81,22 +97,37 @@ socket.on('startGame', data => {
     walls.white[key].disableBody();
     delete walls.white[key]
   }
+  if (playerAbility.obj) {
+    playerAbility.obj.setScale(0);
+    playerAbility.obj.disableBody();
+    playerAbility.type = "main";
+    delete playerAbility.obj;
+  }
+  for (key in playerDetails) {
+    if (playerDetails[key].ability) {
+      playerDetails[key].ability.setScale(0);
+      playerDetails[key].ability.disableBody();
+      playerDetails[key].ability = null;  
+    }
+  }
   walls.redCounter = 0;
   walls.blueCounter = 0;
   walls.whiteCounter = 0;
   player.x = data.startingPositions2[team].x
   player.y = data.startingPositions2[team].y
-  console.log("Placing player at", data.startingPositions2[team].x, data.startingPositions2[team].y)
   for (key in data.users) {
     if (key != id) {
       playerSprites[parseInt(key)].x = data.startingPositions2[data.users[key]].x
       playerSprites[parseInt(key)].y = data.startingPositions2[data.users[key]].y
+      playerNames[key].x = playerSprites[key].x - 27;
+      playerNames[key].y = playerSprites[key].y - 72;
       playerAbilities[key].bar.x = playerSprites[key].x - ((100 - playerAbilities[key].barNum) / 3)
       playerAbilities[key].bar.y = playerSprites[key].y - 46;
       playerAbilities[key].bar.setScale(playerAbilities[key].barNum / 50, 0.5)
       playerAbilities[key].barBack.x = playerSprites[key].x;
       playerAbilities[key].barBack.y = playerSprites[key].y - 46;
       playerAbilities[key].barNum = 0;
+      playerAbilities[key].type = "main";
     }
   }
   $('#secondDiv').css({ display: 'none' });
@@ -108,8 +139,8 @@ socket.on('startGame', data => {
     makeWhiteWall(1000, 500, 0.02, 1.5, walls.whiteCounter, 1)
 
   }
-  let timer = 6;
-  let countdownText = gameEdit.add.text(700, 300, '6', { fontSize: '50px', fill: 'rgb(0, 0, 255)', fontFamily: 'helvetica' });
+  let timer = 3;
+  let countdownText = gameEdit.add.text(700, 300, '3', { fontSize: '50px', fill: 'rgb(0, 0, 255)', fontFamily: 'helvetica' });
   let startCounter = window.setInterval(function () {
     timer--;
     countdownText.setText(timer)
@@ -134,7 +165,6 @@ socket.on('point', team => {
 })
 // Spawn white wall;
 socket.on('whiteWall', data => {
-  console.log("making wall")
   makeWhiteWall(data.x, data.y, data.scaleX, data.scaleY, walls.whiteCounter, data.type);
 });
 // Spawn color walls;
@@ -143,14 +173,11 @@ socket.on('wall', data => {
 })
 socket.on('ability', data => {
   if (data.type === 1) {
-    console.log("id", id)
     if (!playerDetails[data.id].ability) {
-      console.log("created")
       playerDetails[data.id].ability = ability.create(data.x, data.y, 'ability').setScale(0.5).refreshBody();
       playerAbilities[data.id].barNum = 0;
       playerAbilities[data.id].type = "use"
     } else {
-      console.log("deleted")
       playerDetails[data.id].ability.setScale(0);
       playerDetails[data.id].ability.disableBody();
       playerDetails[data.id].ability = null;
@@ -168,7 +195,7 @@ var config = {
     default: 'arcade',
     arcade: {
       gravity: { y: 0 },
-      debug: false
+      debug: true
     }
   },
   scene: {
@@ -206,8 +233,8 @@ function create() {
   playerAbility.barBack = ability.create(100, 100, 'abilityBarBack').setScale(2, 0.5).refreshBody();
   playerAbility.bar = ability.create(100, 100, 'abilityBar').setScale(2, 0.5).refreshBody()
   playerNameText.depth = 1;
-  border.create(700, 100, 'wall').setScale(2.5, 1).refreshBody()
-  border.create(700, 600, 'wall').setScale(2.5, 1).refreshBody()
+  border.create(700, 100, 'wall').setScale(2.5, 1).refreshBody();
+  border.create(700, 600, 'wall').setScale(2.5, 1).refreshBody();
   border.create(184, 350, 'wall').setScale(0.08, 16.64).refreshBody()
   border.create(1216, 350, 'wall').setScale(0.08, 16.64).refreshBody()
   let bg1 = background.create(700, 15, 'background').setScale(1, 0.1).refreshBody();
@@ -232,7 +259,7 @@ function create() {
   this.anims.create({
     key: 'turn',
     frames: [{ key: 'ninja', frame: 'Idle__000.png' }],
-    frameRate: 20
+    frameRate: `20`
   });
   this.anims.create({
     key: 'right',
@@ -276,8 +303,8 @@ function update() {
         playerDetails[key].tempDirection = playerDetails[key].direction
         playerSprites[key].x = playerDetails[key].x;
         playerSprites[key].y = playerDetails[key].y;
-        playerNames[key].x = playerDetails[key]['x'] - 27;
-        playerNames[key].y = playerDetails[key]['y'] - 72;
+        playerNames[key].x = playerDetails[key].x - 27;
+        playerNames[key].y = playerDetails[key].y - 72;
         playerSprites[key].anims.play(playerDetails[key].direction, true);
         if (playerDetails[key].direction === 'left') {
           playerSprites[key].flipX = true
@@ -296,8 +323,6 @@ function update() {
   playerAbility.bar.setScale(playerAbility.barNum / 50, 0.5)
   playerAbility.barBack.x = player.x;
   playerAbility.barBack.y = player.y - 46;
-  // healthBar.x = player.x - ((100 - health) / 4)
-  // healthBar.y = player.y - 36
   if (player.y <= 137) {
     player.y = 562.9;
   } else if (player.y >= 563) {
@@ -305,7 +330,6 @@ function update() {
   } else if (player.x <= 212) {
     player.x = 1187.9;
   } else if (player.x >= 1188) {
-    console.log(player.x)
     player.x = 212.1;
   }
   if (x > xTemp + 2 || x < xTemp - 2 || y > yTemp + 2 || y < yTemp - 2 || direction !== directionTemp) {
@@ -356,16 +380,14 @@ function update() {
   }
   // BASIC ATTACK
   if (cursors.space.isDown && playerAbility.barNum === 100) {
-    if (!playerAbility.used) {
-      playerAbility.used = true;
+    if (playerAbility.type === "main") {
       playerAbility.obj = ability.create(player.x, player.y, 'ability').setScale(0.5).refreshBody();
       playerAbility.type = "use"
       playerAbility.barNum = 0;
       socket.emit('ability', {type: 1, id, x: player.x, y: player.y})
-    } else if (playerAbility.used) {
+    } else if (playerAbility.type === "use") {
       player.x = playerAbility.obj.x;
       player.y = playerAbility.obj.y;
-      playerAbility.used = false;
       playerAbility.obj.setScale(0);
       playerAbility.obj.disableBody();
       playerAbility.type = "main"
@@ -403,6 +425,17 @@ function update() {
           walls[team][key].y -= 2;
         }
       }
+    } else if (walls[team][key].type === 3 || walls[team][key].type === 4) {
+      let dist = 0;
+      if (walls[team][key].type === 3) {
+        dist = 80;
+      } else if (walls[team][key].type === 4) {
+        dist = 160;
+      }
+      walls[team][key].degree++
+      walls[team][key].x = (walls[team][key].center.x + dist * Math.cos((walls[team][key].degree % 360) / 57))
+      walls[team][key].y = (walls[team][key].center.y + dist * Math.sin((walls[team][key].degree % 360) / 57))
+      // walls[team][key].rotation = (walls[team][key].degree % 360) / 57
     }
     walls[team][key].refreshBody();
   }
@@ -413,7 +446,7 @@ function update() {
     } else if (walls.red[key].type === 2) {
       wallMovement('red', key, 112, 588)
     } else {
-      wallMovement('red', key);
+      wallMovement('red', key)
     }
   }
   for (key in walls.blue) {
@@ -422,7 +455,7 @@ function update() {
     } else if (walls.blue[key].type === 2) {
       wallMovement('blue', key, 112, 588)
     } else {
-      wallMovement('blue', key);
+      wallMovement('blue', key)
     }
   }
   // Team identifier
@@ -432,7 +465,6 @@ function update() {
   }
 }
 const makeWhiteWall = function (x, y, scaleX, scaleY, id, type) {
-  console.log(id)
   walls.white[id] = walls.whiteGroup.create(x, y, 'whiteWall').setScale(scaleX, scaleY).refreshBody();
   gameEdit.physics.add.overlap(player, walls.white[id], () => capture(walls.white[id].x, walls.white[id].y, id, direction, type), null, this);
   walls.whiteCounter++;
@@ -450,6 +482,7 @@ const collide = function (team, wall) {
   }
 }
 const spawnColorWall = function (data) {
+  let round = currentRound;
   walls.white[data.id].setScale(0);
   walls.white[data.id].disableBody();
   if (data.type === 1 || data.type === 2) {
@@ -465,7 +498,7 @@ const spawnColorWall = function (data) {
     walls[`${data.team}Array`].push(walls[`${data.team}Counter`])
   } else if (data.type === 3 || data.type === 4) {
     for (let i = 0; i < 3; i++) {
-      walls[data.team][walls[`${data.team}Counter`] + i] = walls[`${data.team}Group`].create(data.x, data.y, `${data.team}Wall`).setScale(0.3, 0.2).refreshBody();
+      walls[data.team][walls[`${data.team}Counter`] + i] = walls[`${data.team}Group`].create(data.x, data.y, `${data.team}Wall`).setDisplaySize(100, 10).refreshBody();
       gameEdit.physics.add.overlap(player, walls[data.team][walls[`${data.team}Counter`] + i], () => collide(team, data.team), null, this);
       walls[data.team][walls[`${data.team}Counter`] + i].depth = -1;
       walls[data.team][walls[`${data.team}Counter`] + i].direction = data.direction;
@@ -478,8 +511,7 @@ const spawnColorWall = function (data) {
     walls[`${data.team}Counter`] += 2;
   }
   window.setTimeout(() => {
-    if (activeGame) {
-      console.log(data)
+    if (round === currentRound) {
       let total = 0;
       if (data.type === 1 || data.type === 2) {
         total = 1;
@@ -495,40 +527,42 @@ const spawnColorWall = function (data) {
         }
       }
     }
-  }, 5000);
+  }, 10000);
   walls[`${data.team}Counter`]++;
 }
 // Spinning walls interval
-window.setInterval(function () {
-  for (key in walls.blue) {
-    if (walls.blue[key].type === 3 || walls.blue[key].type === 4) {
-      let dist = 0;
-      if (walls.blue[key].type === 3) {
-        dist = 80;
-      } else if (walls.blue[key].type === 4) {
-        dist = 160;
-      }
-      walls.blue[key].degree++
-      walls.blue[key].x = (walls.blue[key].center.x + dist * Math.cos((walls.blue[key].degree % 360) / 57))
-      walls.blue[key].y = (walls.blue[key].center.y + dist * Math.sin((walls.blue[key].degree % 360) / 57))
-      walls.blue[key].rotation = (walls.blue[key].degree % 360) / 57
-    }
-  }
-  for (key in walls.red) {
-    if (walls.red[key].type === 3 || walls.red[key].type === 4) {
-      let dist = 0;
-      if (walls.red[key].type === 3) {
-        dist = 80;
-      } else if (walls.red[key].type === 4) {
-        dist = 160;
-      }
-      walls.red[key].degree++
-      walls.red[key].x = (walls.red[key].center.x + dist * Math.cos((walls.red[key].degree % 360) / 57))
-      walls.red[key].y = (walls.red[key].center.y + dist * Math.sin((walls.red[key].degree % 360) / 57))
-      walls.red[key].rotation = (walls.red[key].degree % 360) / 57
-    }
-  }
-}, 20)
+// window.setInterval(function () {
+//   for (key in walls.blue) {
+//     if (walls.blue[key].type === 3 || walls.blue[key].type === 4) {
+//       let dist = 0;
+//       if (walls.blue[key].type === 3) {
+//         dist = 80;
+//       } else if (walls.blue[key].type === 4) {
+//         dist = 160;
+//       }
+//       walls.blue[key].degree++
+//       walls.blue[key].x = (walls.blue[key].center.x + dist * Math.cos((walls.blue[key].degree % 360) / 57))
+//       walls.blue[key].y = (walls.blue[key].center.y + dist * Math.sin((walls.blue[key].degree % 360) / 57))
+//       // walls.blue[key].rotation = (walls.blue[key].degree % 360) / 57
+//       // walls.blue[key].refreshBody();
+//     }
+//   }
+//   for (key in walls.red) {
+//     if (walls.red[key].type === 3 || walls.red[key].type === 4) {
+//       let dist = 0;
+//       if (walls.red[key].type === 3) {
+//         dist = 80;
+//       } else if (walls.red[key].type === 4) {
+//         dist = 160;
+//       }
+//       walls.red[key].degree++
+//       walls.red[key].x = (walls.red[key].center.x + dist * Math.cos((walls.red[key].degree % 360) / 57))
+//       walls.red[key].y = (walls.red[key].center.y + dist * Math.sin((walls.red[key].degree % 360) / 57))
+//       // walls.red[key].rotation = (walls.red[key].degree % 360) / 57
+//       // walls.red[key].refreshBody();
+//     }
+//   }
+// }, 20)
 // Ability cooldown
 window.setInterval(function () {
   if (activeGame) {
@@ -541,7 +575,7 @@ window.setInterval(function () {
       }
     }
   }
-}, 100);
+}, 40); // 100
 window.setInterval(function () {
   if (activeGame) {
     if (playerAbility.barNum < 100 && playerAbility.type === "use") {
@@ -553,16 +587,17 @@ window.setInterval(function () {
       }
     }
   }
-}, 15)
-// document.getElementsByTagName('canvas')[1]
+}, 5) // 15
 $(document).ready(function() {
   $('#continueButton').click(function () {
-    name = $('#nameText').val();
-    $('#firstDiv').css({ display: 'none' });
-    $('#secondDiv').css({ display: 'block' });
-    $('#readyButton').css({ top: `${window.innerHeight - 200}px`, left: `${window.innerWidth/2 - 80}px` })
-    $('#totalReady').css({ top: `${window.innerHeight - 150}px`, left: `${window.innerWidth / 2 - 100}px` });
-    socket.emit('joinedLobby', id);
+    if ($('#nameText').val() !== "") {
+      name = $('#nameText').val();
+      $('#firstDiv').css({ display: 'none' });
+      $('#secondDiv').css({ display: 'block' });
+      $('#readyButton').css({ top: `${window.innerHeight - 200}px`, left: `${window.innerWidth/2 - 80}px` })
+      $('#totalReady').css({ top: `${window.innerHeight - 150}px`, left: `${window.innerWidth / 2 - 100}px` });
+      socket.emit('joinedLobby', {id});
+    }
   })
   $('#blue').click(function () {
     if (!ready) {
