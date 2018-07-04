@@ -1,5 +1,5 @@
-// const socket = io.connect(window.location.hostname);
-const socket = io.connect("http://localhost:3000")
+const socket = io.connect(window.location.hostname);
+// const socket = io.connect("http://localhost:3000")
 
 // GLOBALS
 let gameEdit, player, ability, playerNameText, directionTemp, teamText, name, ready;
@@ -195,7 +195,7 @@ var config = {
     default: 'arcade',
     arcade: {
       gravity: { y: 0 },
-      debug: true
+      debug: false
     }
   },
   scene: {
@@ -504,7 +504,7 @@ const spawnColorWall = function (data) {
       walls[data.team][walls[`${data.team}Counter`] + i].direction = data.direction;
       walls[data.team][walls[`${data.team}Counter`] + i].type = data.type;
       walls[data.team][walls[`${data.team}Counter`] + i].degree = i * 120 + 120;
-      walls[data.team][walls[`${data.team}Counter`] + i].rotation = i * 120 + 120;
+      // walls[data.team][walls[`${data.team}Counter`] + i].rotation = i * 120 + 120;
       walls[data.team][walls[`${data.team}Counter`] + i].center = { x: data.x, y: data.y }
       walls[`${data.team}Array`].push(walls[`${data.team}Counter`] + i)
     }
@@ -527,7 +527,7 @@ const spawnColorWall = function (data) {
         }
       }
     }
-  }, 10000);
+  }, 5000);
   walls[`${data.team}Counter`]++;
 }
 // Spinning walls interval
