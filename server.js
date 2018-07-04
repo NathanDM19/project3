@@ -29,12 +29,6 @@ io.on('connection', socket => {
   socket.broadcast.emit('userConnect', userId);
   userId++;
   totalUsers++;
-  setTimeout(() => {
-    // socket.emit('whiteWall', { x: 400, y: 200, scaleX: 0.02, scaleY: 1.5, type: 1 })
-    // socket.emit('whiteWall', { x: 400, y: 500, scaleX: 0.15, scaleY: 0.25, type: 2 })
-    // socket.emit('whiteWall', { x: 1000, y: 200, scaleX: 0.15, scaleY: 0.25, type: 2 })
-    // socket.emit('whiteWall', { x: 1000, y: 500, scaleX: 0.02, scaleY: 1.5, type: 1 })
-  }, 1000);
 
   // Team join
   socket.on('teamJoin', data => {
@@ -47,7 +41,9 @@ io.on('connection', socket => {
   })
   socket.on('ready', data => {
     totalReady++;
-    users[data.id] = data.team
+    users[data.id] = {}
+    users[data.id].team = data.team
+    users[data.id].character = data.character;
     io.emit('ready', {totalReady, totalUsers });
     if (totalReady === totalUsers) {
       totalReady = 0;
@@ -98,11 +94,11 @@ io.on('connection', socket => {
     setTimeout(function () {
       if (round === currentRound) {
         let random = Math.random();
-        if (random > 1) {
-          io.emit('whiteWall', { x: Math.random() * 900 + 250, y: Math.random() * 380 + 160, scaleX: 0.02, scaleY: 1.5, type: 3 });
-        } else if (random > 1) {
+        if (random > 0.66) {
+          io.emit('whiteWall', { x: Math.random() * 900 + 250, y: Math.random() * 380 + 160, scaleX: 0.02, scaleY: 1.5, type: 1 });
+        } else if (random > 0.33) {
           io.emit('whiteWall', { x: Math.random() * 900 + 250, y: Math.random() * 380 + 160, scaleX: 0.15, scaleY: 0.25, type: 2 });
-        } else if (random > 0.5) {
+        } else if (random > 0.20) {
           io.emit('whiteWall', { x: Math.random() * 700 + 350, y: Math.random() * 180 + 260, scaleX: 0.04, scaleY: 0.5, type: 3 });
         } else if (random > 0) {
           io.emit('whiteWall', { x: Math.random() * 500 + 450, y: Math.random() * 80 + 310, scaleX: 0.06, scaleY: 0.75, type: 4 });

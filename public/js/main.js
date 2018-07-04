@@ -7,7 +7,8 @@ let team = "nutin";
 let id = null;
 let activeGame = false;
 let currentRound = 0;
-let playerAbility = { cooldown: 0, barNum: 0, bar: "", barBack: "", type: "main"};
+let character = "ninja";
+let playerAbility = { cooldown: 0, barNum: 0, bar: "", barBack: "", type: "main" };
 let playerDetails = {};
 let playerCreated = {};
 let playerSprites = {};
@@ -18,7 +19,7 @@ let x = 0;
 let y = 0;
 let xTemp = 0;
 let yTemp = 0;
-let direction = 'turn'
+let direction = 'idle'
 let walls = {
   white: {},
   whiteGroup: "",
@@ -49,7 +50,7 @@ socket.on('connection', data => {
 });
 socket.on('userConnect', id => {
   console.log("User " + id + " has connected.")
-  playerDetails[id] = {x: 400, y: 490, direction: 'turn', ability: null};
+  playerDetails[id] = {x: 400, y: 490, direction: 'idle', ability: null};
 })
 // Movement of other players
 socket.on('movement', data => {
@@ -118,9 +119,8 @@ socket.on('startGame', data => {
   // Useless comment
   for (key in data.users) {
     if (key != id) {
-      console.log(key, data.users)
-      playerSprites[parseInt(key)].x = data.startingPositions2[data.users[key]].x
-      playerSprites[parseInt(key)].y = data.startingPositions2[data.users[key]].y
+      playerSprites[parseInt(key)].x = data.startingPositions2[data.users[key].team].x
+      playerSprites[parseInt(key)].y = data.startingPositions2[data.users[key].team].y
       playerNames[key].x = playerSprites[key].x - 27;
       playerNames[key].y = playerSprites[key].y - 72;
       playerAbilities[key].bar.x = playerSprites[key].x - ((100 - playerAbilities[key].barNum) / 3)
@@ -130,6 +130,8 @@ socket.on('startGame', data => {
       playerAbilities[key].barBack.y = playerSprites[key].y - 46;
       playerAbilities[key].barNum = 0;
       playerAbilities[key].type = "main";
+      playerDetails[key].character = data.users[key].character;
+      playerSprites[key].anims.play(`${playerDetails[key].character}Idle`, true);
     }
   }
   $('#secondDiv').css({ display: 'none' });
@@ -139,7 +141,7 @@ socket.on('startGame', data => {
     makeWhiteWall(400, 500, 0.15, 0.25, walls.whiteCounter, 2)
     makeWhiteWall(1000, 200, 0.15, 0.25, walls.whiteCounter, 2)
     makeWhiteWall(1000, 500, 0.02, 1.5, walls.whiteCounter, 1)
-
+    
   }
   let timer = 3;
   let countdownText = gameEdit.add.text(700, 300, '3', { fontSize: '50px', fill: 'rgb(0, 0, 255)', fontFamily: 'helvetica' });
@@ -174,7 +176,7 @@ socket.on('wall', data => {
   spawnColorWall(data);
 })
 socket.on('ability', data => {
-  if (data.type === 1) {
+  if (data.type === "ninja") {
     if (!playerDetails[data.id].ability) {
       playerDetails[data.id].ability = ability.create(data.x, data.y, 'ability').setScale(0.5).refreshBody();
       playerAbilities[data.id].barNum = 0;
@@ -186,6 +188,8 @@ socket.on('ability', data => {
       playerAbilities[data.id].barNum = 0;
       playerAbilities[data.id].type = "main"
     }
+  } else if (data.type === "robot") {
+    playerAbilities[data.id].type = "use";
   }
 })
 
@@ -211,7 +215,8 @@ var game = new Phaser.Game(config);
 
 function preload() {
   gameEdit = this;
-  this.load.multiatlas('ninja', 'assets/ninja.json', 'assets')
+  this.load.multiatlas('ninja', 'assets/ninja.json', 'assets');
+  this.load.multiatlas('robot', 'assets/robot.json', 'assets');
   this.load.image('wall', 'assets/platform.png');
   this.load.image('redWall', 'assets/redWall.png');
   this.load.image('blueWall', 'assets/blueWall.png');
@@ -250,26 +255,31 @@ function create() {
   score.redText = gameEdit.add.text(1000, 20, '0', { fontSize: '50px', fill: 'rgb(255, 0, 0)', fontFamily: 'helvetica' })
   teamText = gameEdit.add.text(660, 40, `${team[0].toUpperCase()+ team.slice(1)}`, {fontSize: '30px', fill: team, fontFamily: 'helvetica'})
   this.anims.create({
-    key: 'left',
+    key: 'ninjaIdle',
+    frames: [{ key: 'ninja', frame: 'Idle__000.png' }],
+    frameRate: '20'
+  });
+  this.anims.create({
+    key: 'ninjaRun',
     frames: this.anims.generateFrameNames('ninja', {
       start: 0, end: 9, zeroPad: 3,
       prefix: 'Run__', suffix: '.png'
     }),
-    frameRate: 9,
+    frameRate: 12,
     repeat: -1
   });
   this.anims.create({
-    key: 'turn',
-    frames: [{ key: 'ninja', frame: 'Idle__000.png' }],
-    frameRate: `20`
+    key: 'robotIdle',
+    frames: [{ key: 'robot', frame: 'Idle (1).png' }],
+    frameRate: '20'
   });
   this.anims.create({
-    key: 'right',
-    frames: this.anims.generateFrameNames('ninja', {
-      start: 0, end: 9, zeroPad: 3,
-      prefix: 'Run__', suffix: '.png'
+    key: 'robotRun',
+    frames: this.anims.generateFrameNames('robot', {
+      start: 1, end: 8, zeroPad: 1,
+      prefix: 'Run (', suffix: ').png'
     }),
-    frameRate: 9,
+    frameRate: 12,
     repeat: -1
   });
   cursors = this.input.keyboard.createCursorKeys();
@@ -307,11 +317,17 @@ function update() {
         playerSprites[key].y = playerDetails[key].y;
         playerNames[key].x = playerDetails[key].x - 27;
         playerNames[key].y = playerDetails[key].y - 72;
-        playerSprites[key].anims.play(playerDetails[key].direction, true);
-        if (playerDetails[key].direction === 'left') {
-          playerSprites[key].flipX = true
-        } else if (playerDetails[key].direction === 'right') {
-          playerSprites[key].flipX = false
+        if (activeGame) {
+          if (playerDetails[key].direction === 'idle') {
+            playerSprites[key].anims.play(`${playerDetails[key].character}Idle`, true);
+          } else {
+            playerSprites[key].anims.play(`${playerDetails[key].character}Run`, true);
+          }
+          if (playerDetails[key].direction === 'left') {
+            playerSprites[key].flipX = true
+          } else if (playerDetails[key].direction === 'right') {
+            playerSprites[key].flipX = false
+          }
         }
       }
     }
@@ -346,55 +362,67 @@ function update() {
   if (cursors.left.isDown) {
     player.setVelocityX(-200);
     direction = 'left';
-    player.anims.play('left', true);
+    player.anims.play(`${character}Run`, true);
     player.flipX = true;
   }
   if (cursors.right.isDown) {
     player.setVelocityX(200)
     direction = 'right';
-    player.anims.play('right', true);
+    player.anims.play(`${character}Run`, true);
     player.flipX = false;
   }
   if (cursors.up.isDown) {
     if (cursors.left.isUp && cursors.right.isUp) {
-      direction = 'turn'
-      player.anims.play('right', true);
+      direction = 'idle'
+      player.anims.play(`${character}Run`, true);
     }
     player.setVelocityY(-200)
   }
   if (cursors.down.isDown) {
     if (cursors.left.isUp && cursors.right.isUp) {
-      direction = 'turn';
-      player.anims.play('right', true)
+      direction = 'idle';
+      player.anims.play(`${character}Run`, true)
     }
     player.setVelocityY(200)
   }
   if (cursors.left.isUp && cursors.right.isUp) {
-    direction = 'turn'
+    direction = 'idle'
     player.setVelocityX(0)
   }
   if (cursors.up.isUp && cursors.down.isUp) {
     if (cursors.left.isUp && cursors.right.isUp) {
-      direction = 'turn'
-      player.anims.play('turn')
+      direction = 'idle'
+      player.anims.play(`${character}Idle`)
     }
     player.setVelocityY(0)
   }
   // BASIC ATTACK
+  if (playerAbility.barNum === 0 && playerAbility.type === "use" && character === "robot") {
+    playerAbility.type = "main"
+    player.god = false;
+  }
   if (cursors.space.isDown && playerAbility.barNum === 100) {
-    if (playerAbility.type === "main") {
-      playerAbility.obj = ability.create(player.x, player.y, 'ability').setScale(0.5).refreshBody();
-      playerAbility.type = "use"
-      playerAbility.barNum = 0;
-      socket.emit('ability', {type: 1, id, x: player.x, y: player.y})
-    } else if (playerAbility.type === "use") {
-      player.x = playerAbility.obj.x;
-      player.y = playerAbility.obj.y;
-      playerAbility.obj.setScale(0);
-      playerAbility.obj.disableBody();
-      playerAbility.type = "main"
-      playerAbility.barNum = 0;
-      socket.emit('ability', { type: 1, id})
+    if (character === "ninja") {
+      if (playerAbility.type === "main") {
+        playerAbility.obj = ability.create(player.x, player.y, 'ability').setScale(0.5).refreshBody();
+        playerAbility.type = "use"
+        playerAbility.barNum = 0;
+        socket.emit('ability', { type: "ninja", id, x: player.x, y: player.y })
+      } else if (playerAbility.type === "use") {
+        player.x = playerAbility.obj.x;
+        player.y = playerAbility.obj.y;
+        playerAbility.obj.setScale(0);
+        playerAbility.obj.disableBody();
+        playerAbility.type = "main"
+        playerAbility.barNum = 0;
+        socket.emit('ability', { type: "ninja", id })
+      }
+    } else if (character === "robot") {
+      if (playerAbility.type === "main") {
+        player.god = true;
+        playerAbility.type = "use"
+        socket.emit('ability', {type: 'robot', id})
+      }
     }
   }
 
@@ -478,7 +506,7 @@ const capture = function (x, y, id, direction, type) {
 }
 const collide = function (team, wall) {
   // console.log("el collido")
-  if (team !== wall) {
+  if (team !== wall && !player.god) {
     socket.emit('death', team);
     player.disableBody();
   }
@@ -532,40 +560,6 @@ const spawnColorWall = function (data) {
   }, 5000);
   walls[`${data.team}Counter`]++;
 }
-// Spinning walls interval
-// window.setInterval(function () {
-//   for (key in walls.blue) {
-//     if (walls.blue[key].type === 3 || walls.blue[key].type === 4) {
-//       let dist = 0;
-//       if (walls.blue[key].type === 3) {
-//         dist = 80;
-//       } else if (walls.blue[key].type === 4) {
-//         dist = 160;
-//       }
-//       walls.blue[key].degree++
-//       walls.blue[key].x = (walls.blue[key].center.x + dist * Math.cos((walls.blue[key].degree % 360) / 57))
-//       walls.blue[key].y = (walls.blue[key].center.y + dist * Math.sin((walls.blue[key].degree % 360) / 57))
-//       // walls.blue[key].rotation = (walls.blue[key].degree % 360) / 57
-//       // walls.blue[key].refreshBody();
-//     }
-//   }
-//   for (key in walls.red) {
-//     if (walls.red[key].type === 3 || walls.red[key].type === 4) {
-//       let dist = 0;
-//       if (walls.red[key].type === 3) {
-//         dist = 80;
-//       } else if (walls.red[key].type === 4) {
-//         dist = 160;
-//       }
-//       walls.red[key].degree++
-//       walls.red[key].x = (walls.red[key].center.x + dist * Math.cos((walls.red[key].degree % 360) / 57))
-//       walls.red[key].y = (walls.red[key].center.y + dist * Math.sin((walls.red[key].degree % 360) / 57))
-//       // walls.red[key].rotation = (walls.red[key].degree % 360) / 57
-//       // walls.red[key].refreshBody();
-//     }
-//   }
-// }, 20)
-// Ability cooldown
 window.setInterval(function () {
   if (activeGame) {
     if (playerAbility.barNum < 100 && playerAbility.type === "main") {
@@ -580,25 +574,72 @@ window.setInterval(function () {
 }, 40); // 100
 window.setInterval(function () {
   if (activeGame) {
-    if (playerAbility.barNum < 100 && playerAbility.type === "use") {
-      playerAbility.barNum++;
+    if (character === "ninja") {
+      if (playerAbility.barNum < 100 && playerAbility.type === "use") {
+        playerAbility.barNum++;
+      }
+    } else if (character === "robot") {
+      if (playerAbility.barNum > 0 && playerAbility.type === "use") {
+        playerAbility.barNum -= 0.5;
+      }
     }
     for (key in playerAbilities) {
-      if (playerAbilities[key].barNum < 100 && playerAbilities[key].type === "use") {
-        playerAbilities[key].barNum++;
+      if (playerDetails[key].character === "ninja") {
+        if (playerAbilities[key].barNum < 100 && playerAbilities[key].type === "use") {
+          playerAbilities[key].barNum++;
+        }
+      } else if (playerDetails[key].character === "robot") {
+        if (playerAbilities[key].barNum > 0 && playerAbilities[key].type === "use") {
+          playerAbilities[key].barNum -= 0.5;
+        } else if (playerAbilities[key].barNum <= 0 && playerAbilities[key].type === "use") {
+          playerAbilities[key].type = "main"
+        }
       }
     }
   }
 }, 5) // 15
-$(document).ready(function() {
+$(document).ready(function () {
+  // $('#firstDiv').css({ display: 'none' });
+  // $('canvas').css({ display: 'block' })
+  // team = "red"
+  // socket.emit('ready', { id: team })
   $('#continueButton').click(function () {
     if ($('#nameText').val() !== "") {
       name = $('#nameText').val();
       $('#firstDiv').css({ display: 'none' });
       $('#secondDiv').css({ display: 'block' });
-      $('#readyButton').css({ top: `${window.innerHeight - 200}px`, left: `${window.innerWidth/2 - 80}px` })
-      $('#totalReady').css({ top: `${window.innerHeight - 150}px`, left: `${window.innerWidth / 2 - 100}px` });
+      $('#readyButton').css({ top: `${window.innerHeight - 200}px`, left: `${window.innerWidth/2 - 90}px` })
+      $('#totalReady').css({ top: `${window.innerHeight - 150}px`, left: `${window.innerWidth / 2 - 110}px` });
+      $('#character').css({top: `${window.innerHeight - 550}px`, left: `${window.innerWidth / 2 - 190}px`})
       socket.emit('joinedLobby', {id});
+    }
+  })
+  let characters = ["ninja", "robot"];
+  let characterAbilities = ["Teleportation", "Invincibility"]
+  let characterSelected = 0;
+  $('#right').click(function () {
+    if (!ready) {
+      if (characterSelected < characters.length - 1) {
+        characterSelected++;
+      } else {
+        characterSelected = 0;
+      }
+      $('#characterImage').attr('src', `assets/${characters[characterSelected]}Idle.png`);
+      $('#characterName').text(`${characters[characterSelected][0].toUpperCase() + characters[characterSelected].slice(1)}`)
+      $('#ability').text(`Special Ability: ${characterAbilities[characterSelected]}`);
+    }
+  })
+  $('#left').click(function () {
+    if (!ready) {
+      if (characterSelected === 0) {
+        characterSelected = characters.length - 1;
+      } else {
+        characterSelected--;
+      }
+      $('#characterImage').attr('src', `assets/${characters[characterSelected]}Idle.png`);
+      $('#characterName').text(`${characters[characterSelected][0].toUpperCase() + characters[characterSelected].slice(1)}`)
+      $('#ability').text(`Special Ability: ${characterAbilities[characterSelected]}`);
+
     }
   })
   $('#blue').click(function () {
@@ -619,8 +660,9 @@ $(document).ready(function() {
   })
   $('#readyButton').click(function () {
     if (!ready && team !== "nutin") {
-      socket.emit('ready', { id, team });
+      character = characters[characterSelected];
       ready = true;
+      socket.emit('ready', { id, team, character });
     }
   })
 })
