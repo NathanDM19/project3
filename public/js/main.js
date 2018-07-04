@@ -117,6 +117,7 @@ socket.on('startGame', data => {
   player.y = data.startingPositions2[team].y
   for (key in data.users) {
     if (key != id) {
+      console.log(key, data.users)
       playerSprites[parseInt(key)].x = data.startingPositions2[data.users[key]].x
       playerSprites[parseInt(key)].y = data.startingPositions2[data.users[key]].y
       playerNames[key].x = playerSprites[key].x - 27;
