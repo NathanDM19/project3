@@ -115,6 +115,7 @@ socket.on('startGame', data => {
   walls.whiteCounter = 0;
   player.x = data.startingPositions2[team].x
   player.y = data.startingPositions2[team].y
+  // Useless comment
   for (key in data.users) {
     if (key != id) {
       console.log(key, data.users)
