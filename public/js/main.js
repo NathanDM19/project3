@@ -1,9 +1,11 @@
 const socket = io.connect(window.location.hostname);
-// const socket = io.connect("http://localhost:3000")
+// const socket = io.connect("http://10.1.5.248:3000")
+// const socket = io.connect("http://localhost:3000");
 
 // GLOBALS
 let gameEdit, player, ability, playerNameText, directionTemp, teamText, name, ready, winner;
 let team = "nutin";
+let speed = 200;
 let id = null;
 let activeGame = false;
 let currentRound = 0;
@@ -146,6 +148,8 @@ socket.on('startGame', data => {
     makeWhiteWall(1000, 200, 0.15, 0.25, walls.whiteCounter, 2);
     makeWhiteWall(1000, 500, 0.02, 1.5, walls.whiteCounter, 1);
     
+  } else {
+    document.getElementById('gameAudio').play();
   }
   let timer = 3;
   let countdownText = gameEdit.add.text(680, 300, '3', { fontSize: '80px', fill: 'white', fontFamily: 'Orbitron' });
@@ -186,7 +190,15 @@ socket.on('point', team => {
 })
 // Spawn white wall;
 socket.on('whiteWall', data => {
-  makeWhiteWall(data.x, data.y, data.scaleX, data.scaleY, walls.whiteCounter, data.type);
+  if (data.type === 5) {
+    makeWhiteWall(data.x, data.y, data.scaleX, data.scaleY, walls.whiteCounter, 5.1);
+    makeWhiteWall(data.x, data.y, data.scaleX, data.scaleY, walls.whiteCounter, 5.2);    
+  } else if (data.type === 6) {
+    makeWhiteWall(data.x, data.y, data.scaleX, data.scaleY, walls.whiteCounter, 6.1);
+    makeWhiteWall(data.x, data.y, data.scaleX, data.scaleY, walls.whiteCounter, 6.2);  
+  }  else {
+    makeWhiteWall(data.x, data.y, data.scaleX, data.scaleY, walls.whiteCounter, data.type);
+  }
 });
 // Spawn color walls;
 socket.on('wall', data => {
@@ -405,13 +417,13 @@ function update() {
   }
   // PLAYER MOVEMENT
   if (cursors.left.isDown) {
-    player.setVelocityX(-200);
+    player.setVelocityX(-speed);
     direction = 'left';
     player.anims.play(`${character}Run`, true);
     player.flipX = true;
   }
   if (cursors.right.isDown) {
-    player.setVelocityX(200)
+    player.setVelocityX(speed)
     direction = 'right';
     player.anims.play(`${character}Run`, true);
     player.flipX = false;
@@ -421,14 +433,14 @@ function update() {
       direction = 'idle'
       player.anims.play(`${character}Run`, true);
     }
-    player.setVelocityY(-200)
+    player.setVelocityY(-speed)
   }
   if (cursors.down.isDown) {
     if (cursors.left.isUp && cursors.right.isUp) {
       direction = 'idle';
       player.anims.play(`${character}Run`, true)
     }
-    player.setVelocityY(200)
+    player.setVelocityY(speed)
   }
   if (cursors.left.isUp && cursors.right.isUp) {
     direction = 'idle'
@@ -511,6 +523,34 @@ function update() {
       walls[team][key].x = (walls[team][key].center.x + dist * Math.cos((walls[team][key].degree % 360) / 57))
       walls[team][key].y = (walls[team][key].center.y + dist * Math.sin((walls[team][key].degree % 360) / 57))
       // walls[team][key].rotation = (walls[team][key].degree % 360) / 57
+    } else if (walls[team][key].type === 5) {
+      if (walls[team][key].direction === "right") {
+        if (walls[team][key].x >= high) {
+          walls[team][key].direction = 'left';
+        } else {
+          walls[team][key].x += 2;
+        }
+      } else {
+        if (walls[team][key].x <= low) {
+          walls[team][key].direction = 'right';
+        } else {
+          walls[team][key].x -= 2;
+        }
+      }
+    } else if (walls[team][key].type === 6) {
+      if (walls[team][key].direction === "right") {
+        if (walls[team][key].y >= high) {
+          walls[team][key].direction = 'left';
+        } else {
+          walls[team][key].y += 2;
+        }
+      } else {
+        if (walls[team][key].y <= low) {
+          walls[team][key].direction = 'right';
+        } else {
+          walls[team][key].y -= 2;
+        }
+      }
     }
     walls[team][key].refreshBody();
   }
@@ -520,8 +560,12 @@ function update() {
       wallMovement('red', key, 196, 1204)
     } else if (walls.red[key].type === 2) {
       wallMovement('red', key, 112, 588)
-    } else {
+    } else if (walls.red[key].type === 3 || walls.red[key].type === 4) {
       wallMovement('red', key)
+    } else if (walls.red[key].type === 5) {
+      wallMovement('red', key, 320, 1080)
+    } else if (walls.red[key].type === 6) {
+      wallMovement('red', key, 240, 465)
     }
   }
   for (key in walls.blue) {
@@ -529,8 +573,12 @@ function update() {
       wallMovement('blue', key, 196, 1204)
     } else if (walls.blue[key].type === 2) {
       wallMovement('blue', key, 112, 588)
-    } else {
+    } else if (walls.blue[key].type === 3 || walls.blue[key].type === 4) {
       wallMovement('blue', key)
+    } else if (walls.blue[key].type === 5) {
+      wallMovement('blue', key, 320, 1080)
+    } else if (walls.blue[key].type === 6) {
+      wallMovement('blue', key, 240, 465)
     }
   }
   // Team identifier
@@ -548,13 +596,36 @@ const makeWhiteWall = function (x, y, scaleX, scaleY, id, type) {
     walls.white[id] = walls.whiteGroup.create(x, y, 'whiteWallCircle').setScale(0.5).refreshBody();
   } else if (type === 4) {
     walls.white[id] = walls.whiteGroup.create(x, y, 'whiteWallCircle').setScale(0.65).refreshBody();
+  } else if (type === 5.1) {
+    walls.white[id] = walls.whiteGroup.create(x, y, 'whiteWall').setScale(0.16, 0.23).refreshBody();
+  } else if (type === 5.2) {
+    walls.white[id] = walls.whiteGroup.create(x, y, 'whiteWallUp').setScale(0.23, 0.16).refreshBody();
+  } else if (type === 6.1) {
+    walls.white[id] = walls.whiteGroup.create(x, y, 'whiteWall').setScale(0.16, 0.23).refreshBody();
+  } else if (type === 6.2) {
+    walls.white[id] = walls.whiteGroup.create(x, y, 'whiteWallUp').setScale(0.23, 0.16).refreshBody();
   }
   gameEdit.physics.add.overlap(player, walls.white[id], () => capture(walls.white[id].x, walls.white[id].y, id, direction, type), null, this);
   walls.whiteCounter++;
 }
 const capture = function (x, y, id, direction, type) {
-  walls.white[id].setScale(0)
-  walls.white[id].disableBody();
+  console.log(type)
+  if (Math.round(type) === 5 || Math.round(type) === 6) {
+    if (type === 5.1 || type === 6.1) {
+      walls.white[id].setScale(0)
+      walls.white[id].disableBody();
+      walls.white[id + 1].setScale(0)
+      walls.white[id + 1].disableBody();
+    } else {
+      walls.white[id].setScale(0)
+      walls.white[id].disableBody();
+      walls.white[id - 1].setScale(0)
+      walls.white[id - 1].disableBody();
+    }
+  } else {
+    walls.white[id].setScale(0)
+    walls.white[id].disableBody();
+  }
   socket.emit('whiteCapture', {team, x, y, id, direction, type})
 }
 const collide = function (team, wall) {
@@ -587,11 +658,22 @@ const spawnColorWall = function (data) {
       walls[data.team][walls[`${data.team}Counter`] + i].direction = data.direction;
       walls[data.team][walls[`${data.team}Counter`] + i].type = data.type;
       walls[data.team][walls[`${data.team}Counter`] + i].degree = i * 120 + 120;
-      // walls[data.team][walls[`${data.team}Counter`] + i].rotation = i * 120 + 120;
       walls[data.team][walls[`${data.team}Counter`] + i].center = { x: data.x, y: data.y }
       walls[`${data.team}Array`].push(walls[`${data.team}Counter`] + i)
     }
     walls[`${data.team}Counter`] += 2;
+  } else if (Math.round(data.type) === 5 || Math.round(data.type) === 6) {
+    walls[data.team][walls[`${data.team}Counter`]] = walls[`${data.team}Group`].create(data.x, data.y, `${data.team}Wall`).setScale(0.5, 0.25).refreshBody();
+    walls[data.team][walls[`${data.team}Counter`]].depth = -1;
+    walls[data.team][walls[`${data.team}Counter`]].direction = data.direction;
+    walls[data.team][walls[`${data.team}Counter`]].type = Math.round(data.type)
+    walls[`${data.team}Array`].push(walls[`${data.team}Counter`])
+    walls[data.team][walls[`${data.team}Counter`] + 1] = walls[`${data.team}Group`].create(data.x, data.y, `${data.team}WallUp`).setScale(0.25, 0.5).refreshBody();
+    walls[data.team][walls[`${data.team}Counter`] + 1].depth = -1;
+    walls[data.team][walls[`${data.team}Counter`] + 1].direction = data.direction;
+    walls[data.team][walls[`${data.team}Counter`] + 1].type = Math.round(data.type)
+    walls[`${data.team}Array`].push(walls[`${data.team}Counter`] + 1)
+    walls[`${data.team}Counter`] += 1;
   }
   window.setTimeout(() => {
     if (round === currentRound) {
@@ -600,6 +682,8 @@ const spawnColorWall = function (data) {
         total = 1;
       } else if (data.type === 3 || data.type === 4) {
         total = 3;
+      } else if (Math.round(data.type) === 5 || Math.round(data.type) === 6) {
+        total = 2;
       }
       for (let i = 0; i < total; i++) {
         if (walls[data.team][walls[`${data.team}Array`][0]]) {
@@ -661,7 +745,7 @@ $(document).ready(function () {
   $('#blueScoreDiv').css({ top: '20px', left: `${window.innerWidth/3 - 45}px`})
   console.log("S")
   $('#blueScore').css({ top: '-40px', left: '6px' })
-  $('#redScoreDiv').css({ top: '20px', left: `${window.innerWidth / 3 + window.innerWidth / 3 - 10}px` })
+  $('#redScoreDiv').css({ top: '20px', left: `${window.innerWidth / 3 + window.innerWidth / 3 - 50}px` })
   console.log("S")
   $('#redScore').css({ top: '-40px', left: '6px' })
 
