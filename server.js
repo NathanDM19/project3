@@ -8,6 +8,7 @@ let totalUsers = 0;
 let totalReady = 0;
 let allUsers = {};
 let users = {};
+let score = { blue: 0, red: 0 };
 let startingPositions2 = { blue: { x: 300, y: 360 }, red: { x: 1100, y: 360 } };
 let startingPositions4 = { blue: [{ x: 300, y: 220 }, { x: 300, y: 510 }], red: [{ x: 1100, y: 220 }, { x: 1100, y: 510 }] };
 
@@ -17,7 +18,7 @@ const PORT = process.env.PORT || 3000
 app.use(express.static('public'));
 
 server.listen(PORT, () => {
-  console.log('Webserver listening on port 3000...');
+  console.log(`Webserver listening on port ${PORT}`);
 });
 
 io.on('connection', socket => {
@@ -73,7 +74,6 @@ io.on('connection', socket => {
 
   // Movement
   socket.on('movement', data => {
-    console.log(data)
     socket.broadcast.emit('movement', data)
     allUsers[data.id].x = data.x
     allUsers[data.id].y = data.y
@@ -81,11 +81,19 @@ io.on('connection', socket => {
   socket.on('death', team => {
     if (team === "red") {
       io.emit('point', 'blue')
+      score.blue++;
     } else if (team === "blue") {
       io.emit('point', 'red')
+      score.red++;
     }
     currentRound++;
-    io.emit('startGame', { startingPositions2, users, teams, newRound: true })
+    if (score.red < 5 && score.blue < 5) {
+      io.emit('startGame', { startingPositions2, users, teams, newRound: true })
+    } else if (score.red === 5) { 
+      io.emit('winner', 'Red')
+    } else if (score.blue === 5) {
+      io.emit('winner', 'Blue')
+    }
   })
   // Wall capture
   socket.on('whiteCapture', data => {
@@ -110,7 +118,8 @@ io.on('connection', socket => {
     currentRound = 0;
     allUsers = {};
     users = {}
-    teams = { red: { }, blue: { } };
+    teams = { red: {}, blue: {} };
+    score = { blue: 0, red: 0 };
   })
   socket.on('ability', data => {
     socket.broadcast.emit('ability', data)

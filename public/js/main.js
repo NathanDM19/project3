@@ -1,8 +1,8 @@
-// const socket = io.connect(window.location.hostname);
-const socket = io.connect("http://localhost:3000")
+const socket = io.connect(window.location.hostname);
+// const socket = io.connect("http://localhost:3000")
 
 // GLOBALS
-let gameEdit, player, ability, playerNameText, directionTemp, teamText, name, ready;
+let gameEdit, player, ability, playerNameText, directionTemp, teamText, name, ready, winner;
 let team = "nutin";
 let id = null;
 let activeGame = false;
@@ -64,10 +64,12 @@ socket.on('startGame', data => {
   playerAbility.barNum = 0;
   activeGame = false;
   playerNameText.setText(name)
+  playerNameText.setStyle({fontSize: '20px', fill: team, fontFamily: "Orbitron" })
   for (key in data.teams.red) {
     for (names in playerNames) {
       if (key === names) {
         playerNames[names].setText(data.teams.red[key])
+        playerNames[names].setStyle({ fontSize: '20px', fill: 'red', fontFamily: "Orbitron" })
       }
     }
   }
@@ -75,6 +77,7 @@ socket.on('startGame', data => {
     for (names in playerNames) {
       if (key === names) {
         playerNames[names].setText(data.teams.blue[key])
+        playerNames[names].setStyle({ fontSize: '20px', fill: 'blue', fontFamily: "Orbitron" })
       }
     }
   }
@@ -121,8 +124,8 @@ socket.on('startGame', data => {
     if (key != id) {
       playerSprites[parseInt(key)].x = data.startingPositions2[data.users[key].team].x
       playerSprites[parseInt(key)].y = data.startingPositions2[data.users[key].team].y
-      playerNames[key].x = playerSprites[key].x - 27;
-      playerNames[key].y = playerSprites[key].y - 72;
+      playerNames[key].x = playerSprites[key].x - 37;
+      playerNames[key].y = playerSprites[key].y - 80;
       playerAbilities[key].bar.x = playerSprites[key].x - ((100 - playerAbilities[key].barNum) / 3)
       playerAbilities[key].bar.y = playerSprites[key].y - 46;
       playerAbilities[key].bar.setScale(playerAbilities[key].barNum / 50, 0.5)
@@ -136,15 +139,16 @@ socket.on('startGame', data => {
   }
   $('#secondDiv').css({ display: 'none' });
   $('canvas').css({ display: "block" });
+  $('#gameDiv').css({display: "block"})
   if (data.newRound) {
-    makeWhiteWall(400, 200, 0.02, 1.5, walls.whiteCounter, 1);
-    makeWhiteWall(400, 500, 0.15, 0.25, walls.whiteCounter, 2)
-    makeWhiteWall(1000, 200, 0.15, 0.25, walls.whiteCounter, 2)
-    makeWhiteWall(1000, 500, 0.02, 1.5, walls.whiteCounter, 1)
+    makeWhiteWall(400, 200, 0.02, 1.5, walls.whiteCounter, 2);
+    makeWhiteWall(400, 500, 0.15, 0.25, walls.whiteCounter, 1);
+    makeWhiteWall(1000, 200, 0.15, 0.25, walls.whiteCounter, 2);
+    makeWhiteWall(1000, 500, 0.02, 1.5, walls.whiteCounter, 1);
     
   }
   let timer = 3;
-  let countdownText = gameEdit.add.text(700, 300, '3', { fontSize: '50px', fill: 'rgb(0, 0, 255)', fontFamily: 'helvetica' });
+  let countdownText = gameEdit.add.text(680, 300, '3', { fontSize: '80px', fill: 'white', fontFamily: 'Orbitron' });
   let startCounter = window.setInterval(function () {
     timer--;
     countdownText.setText(timer)
@@ -160,12 +164,25 @@ socket.on('startGame', data => {
 socket.on('userDisconnect', data => {
   playerDetails[data] = 'disconnected';
 });
+socket.on('winner', data => {
+  player.disableBody();
+  $('canvas').css({ display: 'none' })
+  winner = data;
+  $('#endDiv').css({ display: 'block' });
+  $('#winnerText').text(`${winner} Team has won the game!`);
+})
 socket.on('ready', data => {
   $('#totalReady').text(`${data.totalReady} / ${data.totalUsers} Ready`)
 })
 socket.on('point', team => {
   score[team]++;
-  score[`${team}Text`].setText(score[team]);
+  console.log(score[team], team)
+  $(`#${team}Score`).text(`${score[team]}`)
+  if (score[team] === 1) {
+    $(`#${team}Score`).css({ top: '-40px', left: '17px' })
+  } else {
+    $(`#${team}Score`).css({ top: '-40px', left: '6px' })
+  }
 })
 // Spawn white wall;
 socket.on('whiteWall', data => {
@@ -195,8 +212,8 @@ socket.on('ability', data => {
 
 var config = {
   type: Phaser.AUTO,
-  width: 1400,
-  height: 670,
+  width: window.innerWidth,
+  height: window.innerHeight,
   physics: {
     default: 'arcade',
     arcade: {
@@ -225,11 +242,11 @@ function preload() {
   this.load.image('whiteWall', 'assets/Green_laser.png');
   this.load.image('whiteWallUp', '/assets/Green_laser_up.png')
   this.load.image('whiteWallCircle', '/assets/Green_laser_circle.png')
-  this.load.image('background', 'assets/black.png');
+  this.load.image('background', 'assets/background.jpg');
   this.load.image('ability', 'assets/ability.png')
   this.load.image('abilityBar', 'assets/abilityBar.png')
   this.load.image('abilityBarBack', 'assets/abilityBarBack.png')
-  this.load.image('arena', 'assets/arena.bmp');
+  this.load.image('arena', 'assets/arena.png');
   this.load.image('leftArena', 'assets/leftArena.png');
   this.load.image('topArena', 'assets/topArena.png')
   this.load.image('bottomArena', 'assets/bottomArena.png')
@@ -242,12 +259,14 @@ function create() {
   const border = this.physics.add.staticGroup();
   walls.whiteGroup = this.physics.add.staticGroup();
   ability = this.physics.add.staticGroup();
-  let arena = background.create(442, 220, 'arena').setScale(1.008, 1.01).refreshBody();
-  let leftArena = background.create(-600, 205, 'leftArena').setScale(1, 1.005).refreshBody();
+  let backgroundImage = background.create(700, 400, 'background').setScale(1).refreshBody();
+  let arena = background.create(442, 220, 'arena').setScale(1.008, 1.06).refreshBody();
+  let leftArena = background.create(-599, 212, 'leftArena').setScale(1, 1.078).refreshBody();
   let topArena = background.create(442, -484, 'topArena').setScale(1.008, 1).refreshBody()
-  let bottomArena = background.create(974, 1184, 'bottomArena').setScale(1.008, 1).refreshBody();
-  let rightArena = background.create(2000, 205, 'leftArena').setScale(1,1.005).refreshBody()
+  let bottomArena = background.create(974, 1184, 'bottomArena').setScale(1.009, 1).refreshBody();
+  let rightArena = background.create(2000, 212, 'leftArena').setScale(1,1.078).refreshBody()
   bottomArena.depth = 0.1;
+  backgroundImage.depth = -3;
   topArena.depth = 0.1;
   leftArena.depth = 0.1;
   rightArena.depth = 0.1;
@@ -255,27 +274,27 @@ function create() {
   arena.depth = -2;
   player = this.physics.add.sprite(690, 320, 'ninja', "Idle__000.png").setScale(0.15);
   player.depth = 10;
-  playerNameText = this.add.text(200, 200, `Player ${id}`, { fontSize: '12px', fill: '#FFF', fontFamily: "helvetica" });
+  playerNameText = this.add.text(200, 200, `Player ${id}`, { fontSize: '12px', fill: '#FFF', fontFamily: "Orbitron" });
   player.disableBody();
   playerAbility.barBack = ability.create(100, 100, 'abilityBarBack').setScale(2, 0.5).refreshBody();
   playerAbility.barBack.depth = 1;
   playerAbility.bar = ability.create(100, 100, 'abilityBar').setScale(2, 0.5).refreshBody()
   playerAbility.bar.depth = 2;
   playerNameText.depth = 2;
-  border.create(700, 100, 'wall').setScale(2.5, 1).refreshBody();
-  border.create(700, 600, 'wall').setScale(2.5, 1).refreshBody();
-  border.create(184, 350, 'wall').setScale(0.08, 16.64).refreshBody()
-  border.create(1216, 350, 'wall').setScale(0.08, 16.64).refreshBody()
-  let bg1 = background.create(700, 15, 'background').setScale(1, 0.1).refreshBody();
-  let bg2 = background.create(100, 350, 'background').setScale(0.1, 1).refreshBody(); 
-  let bg3 = background.create(1300, 350, 'background').setScale(0.1, 1).refreshBody(); 
-  let bg4 = background.create(700, 684, 'background').setScale(1, 0.1).refreshBody(); 
+  // border.create(700, 100, 'wall').setScale(2.5, 1).refreshBody();
+  // border.create(700, 600, 'wall').setScale(2.5, 1).refreshBody();
+  // border.create(184, 350, 'wall').setScale(0.08, 16.64).refreshBody()
+  // border.create(1216, 350, 'wall').setScale(0.08, 16.64).refreshBody()
+  // let bg1 = background.create(700, 15, 'background').setScale(1, 0.1).refreshBody();
+  // let bg2 = background.create(100, 350, 'background').setScale(0.1, 1).refreshBody(); 
+  // let bg3 = background.create(1300, 350, 'background').setScale(0.1, 1).refreshBody(); 
+  // let bg4 = background.create(700, 684, 'background').setScale(1, 0.1).refreshBody(); 
 
-  bg1.depth = bg2.depth = bg3.depth = bg4.depth =  -0.5;
+  // bg1.depth = bg2.depth = bg3.depth = bg4.depth =  -0.5;
   this.physics.add.collider(player, walls);
-  score.blueText = gameEdit.add.text(390, 20, '0', { fontSize: '50px', fill: 'rgb(0, 0, 255)', fontFamily: 'helvetica' });
-  score.redText = gameEdit.add.text(1000, 20, '0', { fontSize: '50px', fill: 'rgb(255, 0, 0)', fontFamily: 'helvetica' })
-  teamText = gameEdit.add.text(660, 40, `${team[0].toUpperCase()+ team.slice(1)}`, {fontSize: '30px', fill: team, fontFamily: 'helvetica'})
+  // score.blueText = gameEdit.add.text(390, 20, '0', { fontSize: '50px', fill: 'rgb(0, 0, 255)', fontFamily: 'Orbitron' });
+  // score.redText = gameEdit.add.text(1000, 20, '0', { fontSize: '50px', fill: 'rgb(255, 0, 0)', fontFamily: 'Orbitron' })
+  // teamText = gameEdit.add.text(660, 40, `${team[0].toUpperCase() + team.slice(1)}`, { fontSize: '30px', fill: team, fontFamily: 'Orbitron'})
   this.anims.create({
     key: 'ninjaIdle',
     frames: [{ key: 'ninja', frame: 'Idle__000.png' }],
@@ -341,8 +360,8 @@ function update() {
         playerDetails[key].tempDirection = playerDetails[key].direction
         playerSprites[key].x = playerDetails[key].x;
         playerSprites[key].y = playerDetails[key].y;
-        playerNames[key].x = playerDetails[key].x - 27;
-        playerNames[key].y = playerDetails[key].y - 72;
+        playerNames[key].x = playerDetails[key].x - 37;
+        playerNames[key].y = playerDetails[key].y - 80;
         if (activeGame) {
           if (playerDetails[key].direction === 'idle') {
             playerSprites[key].anims.play(`${playerDetails[key].character}Idle`, true);
@@ -360,17 +379,17 @@ function update() {
   }
   x = player.x
   y = player.y
-  playerNameText.x = player.x - 22;
-  playerNameText.y = player.y - 72;
+  playerNameText.x = player.x - 37;
+  playerNameText.y = player.y - 80;
   playerAbility.bar.x = player.x - ((100 - playerAbility.barNum) / 3)
   playerAbility.bar.y = player.y - 46;
   playerAbility.bar.setScale(playerAbility.barNum / 50, 0.5)
   playerAbility.barBack.x = player.x;
   playerAbility.barBack.y = player.y - 46;
-  if (player.y <= 132) {
+  if (player.y <= 151) {
     player.y = 549.9
   } else if (player.y >= 550) {
-    player.y = 132.1;
+    player.y = 151.1;
   } else if (player.x <= 225) {
     player.x = 1180.9;
   } else if (player.x >= 1181) {
@@ -515,10 +534,10 @@ function update() {
     }
   }
   // Team identifier
-  if (teamText.text !== team) {
-    teamText.setText(team[0].toUpperCase()+ team.slice(1))
-    teamText.setStyle({color: team, fontSize: '30px', fontFamily: 'helvetica'})
-  }
+  // if (teamText.text !== team) {
+  //   teamText.setText(team[0].toUpperCase()+ team.slice(1))
+  //   teamText.setStyle({color: team, fontSize: '30px', fontFamily: 'helvetica'})
+  // }
 }
 const makeWhiteWall = function (x, y, scaleX, scaleY, id, type) {
   if (type === 1) {
@@ -526,9 +545,9 @@ const makeWhiteWall = function (x, y, scaleX, scaleY, id, type) {
   } else if (type === 2) {
     walls.white[id] = walls.whiteGroup.create(x, y, 'whiteWall').setScale(0.16, 0.23).refreshBody();
   } else if (type === 3) {
-    walls.white[id] = walls.whiteGroup.create(x, y, 'whiteWallCircle').setScale(1).refreshBody();
+    walls.white[id] = walls.whiteGroup.create(x, y, 'whiteWallCircle').setScale(0.5).refreshBody();
   } else if (type === 4) {
-    walls.white[id] = walls.whiteGroup.create(x, y, 'whiteWall').setScale(0.08, 0.46).refreshBody();
+    walls.white[id] = walls.whiteGroup.create(x, y, 'whiteWallCircle').setScale(0.65).refreshBody();
   }
   gameEdit.physics.add.overlap(player, walls.white[id], () => capture(walls.white[id].x, walls.white[id].y, id, direction, type), null, this);
   walls.whiteCounter++;
@@ -551,9 +570,9 @@ const spawnColorWall = function (data) {
   walls.white[data.id].disableBody();
   if (data.type === 1 || data.type === 2) {
     if (data.type === 1) {
-      walls[data.team][walls[`${data.team}Counter`]] = walls[`${data.team}Group`].create(data.x, data.y, `${data.team}WallUp`).setScale(0.25, 2).refreshBody();
+      walls[data.team][walls[`${data.team}Counter`]] = walls[`${data.team}Group`].create(data.x, 350, `${data.team}WallUp`).setScale(0.25, 0.93).refreshBody();
     } else if (data.type === 2) {
-      walls[data.team][walls[`${data.team}Counter`]] = walls[`${data.team}Group`].create(data.x, data.y, `${data.team}Wall`).setScale(5, 0.25).refreshBody();
+      walls[data.team][walls[`${data.team}Counter`]] = walls[`${data.team}Group`].create(701, data.y, `${data.team}Wall`).setScale(1.97, 0.25).refreshBody();
     }
     gameEdit.physics.add.overlap(player, walls[data.team][walls[`${data.team}Counter`]], () => collide(team, data.team), null, this);
     walls[data.team][walls[`${data.team}Counter`]].depth = -1;
@@ -637,13 +656,22 @@ $(document).ready(function () {
   // $('canvas').css({ display: 'block' })
   // team = "red"
   // socket.emit('ready', { id: team })
+  // $('#gameDiv').css({ display: "block" })
+
+  $('#blueScoreDiv').css({ top: '20px', left: `${window.innerWidth/3 - 45}px`})
+  console.log("S")
+  $('#blueScore').css({ top: '-40px', left: '6px' })
+  $('#redScoreDiv').css({ top: '20px', left: `${window.innerWidth / 3 + window.innerWidth / 3 - 10}px` })
+  console.log("S")
+  $('#redScore').css({ top: '-40px', left: '6px' })
+
   $('#continueButton').click(function () {
     if ($('#nameText').val() !== "") {
       name = $('#nameText').val();
       $('#firstDiv').css({ display: 'none' });
       $('#secondDiv').css({ display: 'block' });
       $('#readyButton').css({ top: `${window.innerHeight - 200}px`, left: `${window.innerWidth/2 - 90}px` })
-      $('#totalReady').css({ top: `${window.innerHeight - 150}px`, left: `${window.innerWidth / 2 - 110}px` });
+      $('#totalReady').css({ top: `${window.innerHeight - 150}px`, left: `${window.innerWidth / 2 - 140}px` });
       $('#character').css({top: `${window.innerHeight - 550}px`, left: `${window.innerWidth / 2 - 190}px`})
       socket.emit('joinedLobby', {id});
     }

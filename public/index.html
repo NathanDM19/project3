@@ -8,6 +8,7 @@
   <script src="js/phaser.js"></script>
   <script src="js/jq.js"></script>
   <script src="/socket.io/socket.io.js"></script>
+  <link href="https://fonts.googleapis.com/css?family=Orbitron" rel="stylesheet">
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -22,15 +23,12 @@
     </div>
   </div>
   <div id="secondDiv">
-<div></div>    
-<div></div>
     <img id="logo" src="assets/logo.png">
     <p id="chooseTeam" class="mainText"></p>
     <div id="blueDiv">
       <div id="blueDivInner">
         <p class="blue" id="blue">Blue</p>
         <div class="blue" id="blueList">
-
         </div>
       </div>
     </div>
@@ -38,7 +36,6 @@
       <div id="redDivInner">
         <p class="red" id="red">Red</p>
         <div class="red" id="redList">
-
         </div>
       </div>
     </div>
@@ -53,6 +50,17 @@
       <p id="ready" class="mainText">Ready</p>
     </div>
     <p id="totalReady" class="mainText">0 / 0 Ready</p>
+  </div>
+  <div id="gameDiv">
+    <div id="blueScoreDiv">
+      <p id="blueScore">0</p>
+    </div>
+    <div id="redScoreDiv">
+      <p id="redScore">0</p>
+    </div>
+  </div>
+  <div id="endDiv">
+    <p id="winnerText">x Team has won the game!</p>
   </div>
   <script src="js/main.js"></script>
 </body>
