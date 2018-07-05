@@ -737,7 +737,7 @@ window.setInterval(function () {
 }, 5) // 15
 $(document).ready(function () {
   // $('#firstDiv').css({ display: 'none' });
-  // $('canvas').css({ display: 'block' })
+  // $('canvas').css({ display: 'block' })s
   // team = "red"
   // socket.emit('ready', { id: team })
   // $('#gameDiv').css({ display: "block" })
