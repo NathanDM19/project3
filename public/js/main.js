@@ -63,6 +63,7 @@ socket.on('movement', data => {
 })
 socket.on('startGame', data => {
   currentRound++;
+  speed = 200;
   player.disableBody();
   playerAbility.barNum = 0;
   activeGame = false;
@@ -161,9 +162,10 @@ socket.on('startGame', data => {
     countdownText.setText(timer)
     if (timer === 0) {
       player.enableBody(true, data.startingPositions2[team].x, data.startingPositions2[team].y);
-      countdownText.setText("")
-      window.clearInterval(startCounter)
+      countdownText.setText("");
+      window.clearInterval(startCounter);
       activeGame = true;
+      console.log("CHANGED BEFORE", player.x, player.y)
     }
   }, 1000)
 })
@@ -241,7 +243,7 @@ var config = {
     default: 'arcade',
     arcade: {
       gravity: { y: 0 },
-      debug: false
+      debug: true
     }
   },
   scene: {
@@ -309,7 +311,7 @@ function create() {
   this.physics.add.collider(player, walls);
   this.anims.create({
     key: 'ninjaIdle',
-    frames: [{ key: 'ninja', frame: 'Idle__000.png' }],
+    frames: [{ key: 'ninja', frame: 'Idle__001.png' }],
     frameRate: '20'
   });
   this.anims.create({
@@ -397,7 +399,7 @@ function update() {
       playerAbilities[key].barBack.x = playerSprites[key].x;
       playerAbilities[key].barBack.y = playerSprites[key].y - 46;
       if (playerSprites[key].x !== playerDetails[key].x || playerSprites[key].y !== playerDetails[key].y || playerDetails[key].direction !== playerDetails[key].tempDirection) {
-        playerDetails[key].tempDirection = playerDetails[key].direction
+        playerDetails[key].tempDirection = playerDetails[key].direction;
         playerSprites[key].x = playerDetails[key].x;
         playerSprites[key].y = playerDetails[key].y;
         playerNames[key].x = playerDetails[key].x - 37;
@@ -437,8 +439,8 @@ function update() {
   }
   if (x > xTemp + 2 || x < xTemp - 2 || y > yTemp + 2 || y < yTemp - 2 || direction !== directionTemp) {
     x = Math.round(x);
-    y = Math.round(y); 
-    socket.emit('movement', {id, x, y, direction})
+    y = Math.round(y);
+    socket.emit('movement', { id, x, y, direction })
     xTemp = x
     yTemp = y
     directionTemp = direction
@@ -473,6 +475,7 @@ function update() {
   if (cursors.left.isUp && cursors.right.isUp) {
     direction = 'idle'
     player.setVelocityX(0)
+
   }
   if (cursors.up.isUp && cursors.down.isUp) {
     if (cursors.left.isUp && cursors.right.isUp) {
@@ -482,7 +485,7 @@ function update() {
     player.setVelocityY(0)
   }
   // BASIC ATTACK
-  if (cursors.space.isDown && playerAbility.barNum === 100) {
+  if (cursors.space.isDown && playerAbility.barNum === 100 && activeGame) {
     if (character === "ninja") {
       if (playerAbility.type === "main") {
         playerAbility.obj = ability.create(player.x, player.y, 'ability').setScale(0.15).refreshBody();
@@ -516,90 +519,18 @@ function update() {
         socket.emit('ability', { type: 'cowboy', id });
       }
     }
-    if (playerAbility.barNum === 0 && playerAbility.type === "use" && character === "robot") {
-      playerAbility.type = "main"
-      player.god = false;
-    } else if (playerAbility.barNum === 0 && playerAbility.type === "use" && character === "dog") {
-      playerAbility.type = "main"
-      speed = 200;
-    } else if (playerAbility.barNum === 0 && playerAbility.type === "use" && character === "cowboy") {
-      playerAbility.type = "main"
-    }
   }
-  const wallMovement = function (team, key, low, high) {
-    if (walls[team][key].type === 1) {
-      if (walls[team][key].direction === "right") {
-        if (walls[team][key].x >= high) {
-          walls[team][key].direction = 'left';
-        } else {
-          walls[team][key].x += 2;
-        }
-      } else {
-        if (walls[team][key].x <= low) {
-          walls[team][key].direction = 'right';
-        } else {
-          walls[team][key].x -= 2;
-        }
-      }
-    } else if (walls[team][key].type === 2) {
-      if (walls[team][key].direction === "right") {
-        if (walls[team][key].y >= high) {
-          walls[team][key].direction = 'left';
-        } else {
-          walls[team][key].y += 2;
-        }
-      } else {
-        if (walls[team][key].y <= low) {
-          walls[team][key].direction = 'right';
-        } else {
-          walls[team][key].y -= 2;
-        }
-      }
-    } else if (walls[team][key].type === 3 || walls[team][key].type === 4) {
-      let dist = 0;
-      if (walls[team][key].type === 3) {
-        dist = 80;
-      } else if (walls[team][key].type === 4) {
-        dist = 160;
-      }
-      walls[team][key].degree++
-      walls[team][key].x = (walls[team][key].center.x + dist * Math.cos((walls[team][key].degree % 360) / 57))
-      walls[team][key].y = (walls[team][key].center.y + dist * Math.sin((walls[team][key].degree % 360) / 57))
-      // walls[team][key].rotation = (walls[team][key].degree % 360) / 57
-    } else if (walls[team][key].type === 5) {
-      if (walls[team][key].direction === "right") {
-        if (walls[team][key].x >= high) {
-          walls[team][key].direction = 'left';
-        } else {
-          walls[team][key].x += 2;
-        }
-      } else {
-        if (walls[team][key].x <= low) {
-          walls[team][key].direction = 'right';
-        } else {
-          walls[team][key].x -= 2;
-        }
-      }
-    } else if (walls[team][key].type === 6) {
-      if (walls[team][key].direction === "right") {
-        if (walls[team][key].y >= high) {
-          walls[team][key].direction = 'left';
-        } else {
-          walls[team][key].y += 2;
-        }
-      } else {
-        if (walls[team][key].y <= low) {
-          walls[team][key].direction = 'right';
-        } else {
-          walls[team][key].y -= 2;
-        }
-      }
-    }
-    walls[team][key].refreshBody();
+  if (playerAbility.barNum === 0 && playerAbility.type === "use" && character === "robot") {
+    playerAbility.type = "main"
+    player.god = false;
+  } else if (playerAbility.barNum === 0 && playerAbility.type === "use" && character === "dog") {
+    playerAbility.type = "main"
+    speed = 200;
+  } else if (playerAbility.barNum === 0 && playerAbility.type === "use" && character === "cowboy") {
+    playerAbility.type = "main"
   }
-  // Red Wall Movement
   if (activeGame) {
-    
+
     for (key in walls.red) {
       if (walls.red[key].type === 1) {
         wallMovement('red', key, 196, 1204)
@@ -627,12 +558,84 @@ function update() {
       }
     }
   }
+}
+const wallMovement = function (team, key, low, high) {
+  if (walls[team][key].type === 1) {
+    if (walls[team][key].direction === "right") {
+      if (walls[team][key].x >= high) {
+        walls[team][key].direction = 'left';
+      } else {
+        walls[team][key].x += 2;
+      }
+    } else {
+      if (walls[team][key].x <= low) {
+        walls[team][key].direction = 'right';
+      } else {
+        walls[team][key].x -= 2;
+      }
+    }
+  } else if (walls[team][key].type === 2) {
+    if (walls[team][key].direction === "right") {
+      if (walls[team][key].y >= high) {
+        walls[team][key].direction = 'left';
+      } else {
+        walls[team][key].y += 2;
+      }
+    } else {
+      if (walls[team][key].y <= low) {
+        walls[team][key].direction = 'right';
+      } else {
+        walls[team][key].y -= 2;
+      }
+    }
+  } else if (walls[team][key].type === 3 || walls[team][key].type === 4) {
+    let dist = 0;
+    if (walls[team][key].type === 3) {
+      dist = 80;
+    } else if (walls[team][key].type === 4) {
+      dist = 160;
+    }
+    walls[team][key].degree++
+    walls[team][key].x = (walls[team][key].center.x + dist * Math.cos((walls[team][key].degree % 360) / 57))
+    walls[team][key].y = (walls[team][key].center.y + dist * Math.sin((walls[team][key].degree % 360) / 57))
+      // walls[team][key].rotation = (walls[team][key].degree % 360) / 57
+  } else if (walls[team][key].type === 5) {
+    if (walls[team][key].direction === "right") {
+      if (walls[team][key].x >= high) {
+        walls[team][key].direction = 'left';
+      } else {
+        walls[team][key].x += 2;
+      }
+    } else {
+      if (walls[team][key].x <= low) {
+        walls[team][key].direction = 'right';
+      } else {
+        walls[team][key].x -= 2;
+      }
+    }
+  } else if (walls[team][key].type === 6) {
+    if (walls[team][key].direction === "right") {
+      if (walls[team][key].y >= high) {
+        walls[team][key].direction = 'left';
+      } else {
+        walls[team][key].y += 2;
+      }
+    } else {
+      if (walls[team][key].y <= low) {
+        walls[team][key].direction = 'right';
+      } else {
+        walls[team][key].y -= 2;
+      }
+    }
+  }
+  walls[team][key].refreshBody();
+}
+  // Red Wall Movement
   // Team identifier
   // if (teamText.text !== team) {
   //   teamText.setText(team[0].toUpperCase()+ team.slice(1))
   //   teamText.setStyle({color: team, fontSize: '30px', fontFamily: 'helvetica'})
   // }
-}
 const makeWhiteWall = function (x, y, scaleX, scaleY, id, type) {
   if (type === 1) {
     walls.white[id] = walls.whiteGroup.create(x, y, 'whiteWallUp').setScale(0.23, 0.16).refreshBody();
@@ -678,7 +681,6 @@ const collide = function (team, wall) {
   // console.log("el collido")
   if (team !== wall && !player.god && activeGame) {
     socket.emit('death', team);
-    player.disableBody();
   }
 }
 const spawnColorWall = function (data) {
