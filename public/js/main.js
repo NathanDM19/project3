@@ -1,6 +1,6 @@
-// const socket = io.connect(window.location.hostname);
+const socket = io.connect(window.location.hostname);
 // const socket = io.connect("http://10.1.5.248:3000")
-const socket = io.connect("http://localhost:3000");
+// const socket = io.connect("http://localhost:3000");
 
 // GLOBALS
 let gameEdit, player, ability, playerNameText, directionTemp, teamText, name, ready, winner, roundWinText;
@@ -243,7 +243,7 @@ var config = {
     default: 'arcade',
     arcade: {
       gravity: { y: 0 },
-      debug: true
+      debug: false
     }
   },
   scene: {
