@@ -136,7 +136,7 @@
   left: 30px;
 }
 #left:hover {
-  cursor: pointer
+  cursor: pointer;
 }
 #right:hover {
   cursor: pointer;
@@ -148,6 +148,8 @@
 #winnerText {
   font-size: 50px;
   color: white;
+  position: relative;
+  top: 250px;
 }
 #gameDiv {
   display: none;

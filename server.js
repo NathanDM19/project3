@@ -9,7 +9,7 @@ let totalReady = 0;
 let allUsers = {};
 let users = {};
 let score = { blue: 0, red: 0 };
-let startingPositions2 = { blue: { x: 300, y: 360 }, red: { x: 1100, y: 360 } };
+let startingPositions2 = { blue: { x: 300, y: 360 }, red: { x: 1110, y: 360 } };
 let startingPositions4 = { blue: [{ x: 300, y: 220 }, { x: 300, y: 510 }], red: [{ x: 1100, y: 220 }, { x: 1100, y: 510 }] };
 
 let teams = { red: {}, blue: {} };
@@ -54,7 +54,7 @@ io.on('connection', socket => {
       } else if (totalUsers === 4) {
         io.emit('startGame', { startingPositions4, users, teams })
       } // 400 200
-      io.emit('whiteWall', { x: 500, y: 300, scaleX: 0.02, scaleY: 1.5, type: 6 })
+      io.emit('whiteWall', { x: 400, y: 200, scaleX: 0.02, scaleY: 1.5, type: 2 })
       io.emit('whiteWall', { x: 400, y: 500, scaleX: 0.15, scaleY: 0.25, type: 1 })
       io.emit('whiteWall', { x: 1000, y: 200, scaleX: 0.15, scaleY: 0.25, type: 2 })
       io.emit('whiteWall', { x: 1000, y: 500, scaleX: 0.02, scaleY: 1.5, type: 1 })
@@ -86,14 +86,16 @@ io.on('connection', socket => {
       io.emit('point', 'red')
       score.red++;
     }
-    currentRound++;
-    if (score.red < 5 && score.blue < 5) {
-      io.emit('startGame', { startingPositions2, users, teams, newRound: true })
-    } else if (score.red === 5) { 
-      io.emit('winner', 'Red')
-    } else if (score.blue === 5) {
-      io.emit('winner', 'Blue')
-    }
+    setTimeout(function () {
+      currentRound++;
+      if (score.red < 5 && score.blue < 5) {
+        io.emit('startGame', { startingPositions2, users, teams, newRound: true })
+      } else if (score.red === 5) {
+        io.emit('winner', 'Red')
+      } else if (score.blue === 5) {
+        io.emit('winner', 'Blue');
+      }
+    }, 4000)
   })
   // Wall capture
   socket.on('whiteCapture', data => {

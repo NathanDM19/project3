@@ -1,13 +1,14 @@
-const socket = io.connect(window.location.hostname);
+// const socket = io.connect(window.location.hostname);
 // const socket = io.connect("http://10.1.5.248:3000")
-// const socket = io.connect("http://localhost:3000");
+const socket = io.connect("http://localhost:3000");
 
 // GLOBALS
-let gameEdit, player, ability, playerNameText, directionTemp, teamText, name, ready, winner;
+let gameEdit, player, ability, playerNameText, directionTemp, teamText, name, ready, winner, roundWinText;
 let team = "nutin";
 let speed = 200;
 let id = null;
 let activeGame = false;
+
 let currentRound = 0;
 let character = "ninja";
 let playerAbility = { cooldown: 0, barNum: 0, bar: "", barBack: "", type: "main" };
@@ -65,6 +66,9 @@ socket.on('startGame', data => {
   player.disableBody();
   playerAbility.barNum = 0;
   activeGame = false;
+  if (roundWinText) {
+    roundWinText.setText("");
+  }
   playerNameText.setText(name)
   playerNameText.setStyle({fontSize: '20px', fill: team, fontFamily: "Orbitron" })
   for (key in data.teams.red) {
@@ -147,7 +151,6 @@ socket.on('startGame', data => {
     makeWhiteWall(400, 500, 0.15, 0.25, walls.whiteCounter, 1);
     makeWhiteWall(1000, 200, 0.15, 0.25, walls.whiteCounter, 2);
     makeWhiteWall(1000, 500, 0.02, 1.5, walls.whiteCounter, 1);
-    
   } else {
     document.getElementById('gameAudio').play();
   }
@@ -163,6 +166,9 @@ socket.on('startGame', data => {
       activeGame = true;
     }
   }, 1000)
+})
+socket.on('timeout', data => {
+  activeGame = false;
 })
 // User disconnects
 socket.on('userDisconnect', data => {
@@ -180,8 +186,10 @@ socket.on('ready', data => {
 })
 socket.on('point', team => {
   score[team]++;
-  console.log(score[team], team)
+  activeGame = false;
   $(`#${team}Score`).text(`${score[team]}`)
+  roundWinText = gameEdit.add.text(300, 300, `${team[0].toUpperCase() + team.slice(1)} Team has won the round!`, { fontSize: '50px', fill: 'white', fontFamily: 'Orbitron' });
+  roundWinText.depth = 100;
   if (score[team] === 1) {
     $(`#${team}Score`).css({ top: '-40px', left: '17px' })
   } else {
@@ -207,7 +215,7 @@ socket.on('wall', data => {
 socket.on('ability', data => {
   if (data.type === "ninja") {
     if (!playerDetails[data.id].ability) {
-      playerDetails[data.id].ability = ability.create(data.x, data.y, 'ability').setScale(0.5).refreshBody();
+      playerDetails[data.id].ability = ability.create(data.x, data.y, 'ability').setScale(0.15).refreshBody();
       playerAbilities[data.id].barNum = 0;
       playerAbilities[data.id].type = "use"
     } else {
@@ -217,7 +225,10 @@ socket.on('ability', data => {
       playerAbilities[data.id].barNum = 0;
       playerAbilities[data.id].type = "main"
     }
-  } else if (data.type === "robot") {
+  } else if (data.type === "robot" || data.type === "dog") {
+    playerAbilities[data.id].type = "use";
+  } else if (data.type === "cowboy") {
+    speed = 120;
     playerAbilities[data.id].type = "use";
   }
 })
@@ -246,6 +257,8 @@ function preload() {
   gameEdit = this;
   this.load.multiatlas('ninja', 'assets/ninja.json', 'assets');
   this.load.multiatlas('robot', 'assets/robot.json', 'assets');
+  this.load.multiatlas('dog', 'assets/dog.json', 'assets');
+  this.load.multiatlas('cowboy', 'assets/cowboy.json', 'assets');
   this.load.image('wall', 'assets/platform.png');
   this.load.image('redWall', 'assets/Red_laser.png');
   this.load.image('redWallUp', 'assets/Red_laser_up.png')
@@ -255,7 +268,7 @@ function preload() {
   this.load.image('whiteWallUp', '/assets/Green_laser_up.png')
   this.load.image('whiteWallCircle', '/assets/Green_laser_circle.png')
   this.load.image('background', 'assets/background.jpg');
-  this.load.image('ability', 'assets/ability.png')
+  this.load.image('ability', 'assets/ninjaStar.png')
   this.load.image('abilityBar', 'assets/abilityBar.png')
   this.load.image('abilityBarBack', 'assets/abilityBarBack.png')
   this.load.image('arena', 'assets/arena.png');
@@ -276,7 +289,7 @@ function create() {
   let leftArena = background.create(-599, 212, 'leftArena').setScale(1, 1.078).refreshBody();
   let topArena = background.create(442, -484, 'topArena').setScale(1.008, 1).refreshBody()
   let bottomArena = background.create(974, 1184, 'bottomArena').setScale(1.009, 1).refreshBody();
-  let rightArena = background.create(2000, 212, 'leftArena').setScale(1,1.078).refreshBody()
+  let rightArena = background.create(2000, 212, 'leftArena').setScale(1, 1.078).refreshBody()
   bottomArena.depth = 0.1;
   backgroundImage.depth = -3;
   topArena.depth = 0.1;
@@ -293,20 +306,7 @@ function create() {
   playerAbility.bar = ability.create(100, 100, 'abilityBar').setScale(2, 0.5).refreshBody()
   playerAbility.bar.depth = 2;
   playerNameText.depth = 2;
-  // border.create(700, 100, 'wall').setScale(2.5, 1).refreshBody();
-  // border.create(700, 600, 'wall').setScale(2.5, 1).refreshBody();
-  // border.create(184, 350, 'wall').setScale(0.08, 16.64).refreshBody()
-  // border.create(1216, 350, 'wall').setScale(0.08, 16.64).refreshBody()
-  // let bg1 = background.create(700, 15, 'background').setScale(1, 0.1).refreshBody();
-  // let bg2 = background.create(100, 350, 'background').setScale(0.1, 1).refreshBody(); 
-  // let bg3 = background.create(1300, 350, 'background').setScale(0.1, 1).refreshBody(); 
-  // let bg4 = background.create(700, 684, 'background').setScale(1, 0.1).refreshBody(); 
-
-  // bg1.depth = bg2.depth = bg3.depth = bg4.depth =  -0.5;
   this.physics.add.collider(player, walls);
-  // score.blueText = gameEdit.add.text(390, 20, '0', { fontSize: '50px', fill: 'rgb(0, 0, 255)', fontFamily: 'Orbitron' });
-  // score.redText = gameEdit.add.text(1000, 20, '0', { fontSize: '50px', fill: 'rgb(255, 0, 0)', fontFamily: 'Orbitron' })
-  // teamText = gameEdit.add.text(660, 40, `${team[0].toUpperCase() + team.slice(1)}`, { fontSize: '30px', fill: team, fontFamily: 'Orbitron'})
   this.anims.create({
     key: 'ninjaIdle',
     frames: [{ key: 'ninja', frame: 'Idle__000.png' }],
@@ -331,6 +331,34 @@ function create() {
     frames: this.anims.generateFrameNames('robot', {
       start: 1, end: 8, zeroPad: 1,
       prefix: 'Run (', suffix: ').png'
+    }),
+    frameRate: 12,
+    repeat: -1
+  });
+  this.anims.create({
+    key: 'dogIdle',
+    frames: [{ key: 'dog', frame: 'Idle (1).png' }],
+    frameRate: '20'
+  });
+  this.anims.create({
+    key: 'dogRun',
+    frames: this.anims.generateFrameNames('dog', {
+      start: 1, end: 8, zeroPad: 1,
+      prefix: 'Run (', suffix: ').png'
+    }),
+    frameRate: 12,
+    repeat: -1
+  });
+  this.anims.create({
+    key: 'cowboyIdle',
+    frames: [{ key: 'cowboy', frame: 'Idle__001.png' }],
+    frameRate: '20'
+  });
+  this.anims.create({
+    key: 'cowboyRun',
+    frames: this.anims.generateFrameNames('cowboy', {
+      start: 1, end: 9, zeroPad: 3,
+      prefix: 'Run__', suffix: '.png'
     }),
     frameRate: 12,
     repeat: -1
@@ -381,9 +409,9 @@ function update() {
             playerSprites[key].anims.play(`${playerDetails[key].character}Run`, true);
           }
           if (playerDetails[key].direction === 'left') {
-            playerSprites[key].flipX = true
+            playerSprites[key].flipX = true;
           } else if (playerDetails[key].direction === 'right') {
-            playerSprites[key].flipX = false
+            playerSprites[key].flipX = false;
           }
         }
       }
@@ -454,14 +482,10 @@ function update() {
     player.setVelocityY(0)
   }
   // BASIC ATTACK
-  if (playerAbility.barNum === 0 && playerAbility.type === "use" && character === "robot") {
-    playerAbility.type = "main"
-    player.god = false;
-  }
   if (cursors.space.isDown && playerAbility.barNum === 100) {
     if (character === "ninja") {
       if (playerAbility.type === "main") {
-        playerAbility.obj = ability.create(player.x, player.y, 'ability').setScale(0.5).refreshBody();
+        playerAbility.obj = ability.create(player.x, player.y, 'ability').setScale(0.15).refreshBody();
         playerAbility.type = "use"
         playerAbility.barNum = 0;
         socket.emit('ability', { type: "ninja", id, x: player.x, y: player.y })
@@ -478,11 +502,30 @@ function update() {
       if (playerAbility.type === "main") {
         player.god = true;
         playerAbility.type = "use"
-        socket.emit('ability', {type: 'robot', id})
+        socket.emit('ability', { type: 'robot', id })
+      }
+    } else if (character === "dog") {
+      if (playerAbility.type === "main") {
+        speed = 350;
+        playerAbility.type = "use"
+        socket.emit('ability', { type: 'dog', id })
+      }
+    } else if (character === "cowboy") {
+      if (playerAbility.type === "main") {
+        playerAbility.type = "use"
+        socket.emit('ability', { type: 'cowboy', id });
       }
     }
+    if (playerAbility.barNum === 0 && playerAbility.type === "use" && character === "robot") {
+      playerAbility.type = "main"
+      player.god = false;
+    } else if (playerAbility.barNum === 0 && playerAbility.type === "use" && character === "dog") {
+      playerAbility.type = "main"
+      speed = 200;
+    } else if (playerAbility.barNum === 0 && playerAbility.type === "use" && character === "cowboy") {
+      playerAbility.type = "main"
+    }
   }
-
   const wallMovement = function (team, key, low, high) {
     if (walls[team][key].type === 1) {
       if (walls[team][key].direction === "right") {
@@ -555,30 +598,33 @@ function update() {
     walls[team][key].refreshBody();
   }
   // Red Wall Movement
-  for (key in walls.red) {
-    if (walls.red[key].type === 1) {
-      wallMovement('red', key, 196, 1204)
-    } else if (walls.red[key].type === 2) {
-      wallMovement('red', key, 112, 588)
-    } else if (walls.red[key].type === 3 || walls.red[key].type === 4) {
-      wallMovement('red', key)
-    } else if (walls.red[key].type === 5) {
-      wallMovement('red', key, 320, 1080)
-    } else if (walls.red[key].type === 6) {
-      wallMovement('red', key, 240, 465)
+  if (activeGame) {
+    
+    for (key in walls.red) {
+      if (walls.red[key].type === 1) {
+        wallMovement('red', key, 196, 1204)
+      } else if (walls.red[key].type === 2) {
+        wallMovement('red', key, 112, 588)
+      } else if (walls.red[key].type === 3 || walls.red[key].type === 4) {
+        wallMovement('red', key)
+      } else if (walls.red[key].type === 5) {
+        wallMovement('red', key, 320, 1080)
+      } else if (walls.red[key].type === 6) {
+        wallMovement('red', key, 240, 465)
+      }
     }
-  }
-  for (key in walls.blue) {
-    if (walls.blue[key].type === 1) {
-      wallMovement('blue', key, 196, 1204)
-    } else if (walls.blue[key].type === 2) {
-      wallMovement('blue', key, 112, 588)
-    } else if (walls.blue[key].type === 3 || walls.blue[key].type === 4) {
-      wallMovement('blue', key)
-    } else if (walls.blue[key].type === 5) {
-      wallMovement('blue', key, 320, 1080)
-    } else if (walls.blue[key].type === 6) {
-      wallMovement('blue', key, 240, 465)
+    for (key in walls.blue) {
+      if (walls.blue[key].type === 1) {
+        wallMovement('blue', key, 196, 1204)
+      } else if (walls.blue[key].type === 2) {
+        wallMovement('blue', key, 112, 588)
+      } else if (walls.blue[key].type === 3 || walls.blue[key].type === 4) {
+        wallMovement('blue', key)
+      } else if (walls.blue[key].type === 5) {
+        wallMovement('blue', key, 320, 1080)
+      } else if (walls.blue[key].type === 6) {
+        wallMovement('blue', key, 240, 465)
+      }
     }
   }
   // Team identifier
@@ -630,13 +676,20 @@ const capture = function (x, y, id, direction, type) {
 }
 const collide = function (team, wall) {
   // console.log("el collido")
-  if (team !== wall && !player.god) {
+  if (team !== wall && !player.god && activeGame) {
     socket.emit('death', team);
     player.disableBody();
   }
 }
 const spawnColorWall = function (data) {
   let round = currentRound;
+  if (data.type === 5.1 || data.type === 6.1) {
+    walls.white[data.id + 1].setScale(0)
+    walls.white[data.id + 1].disableBody()
+  } else if (data.type === 6.1 || data.type === 6.2) {
+    walls.white[data.id - 1].setScale(0);
+    walls.white[data.id - 1].disableBody(0);
+  } 
   walls.white[data.id].setScale(0);
   walls.white[data.id].disableBody();
   if (data.type === 1 || data.type === 2) {
@@ -673,6 +726,8 @@ const spawnColorWall = function (data) {
     walls[data.team][walls[`${data.team}Counter`] + 1].direction = data.direction;
     walls[data.team][walls[`${data.team}Counter`] + 1].type = Math.round(data.type)
     walls[`${data.team}Array`].push(walls[`${data.team}Counter`] + 1)
+    gameEdit.physics.add.overlap(player, walls[data.team][walls[`${data.team}Counter`]], () => collide(team, data.team), null, this);
+    gameEdit.physics.add.overlap(player, walls[data.team][walls[`${data.team}Counter`] + 1], () => collide(team, data.team), null, this);
     walls[`${data.team}Counter`] += 1;
   }
   window.setTimeout(() => {
@@ -715,7 +770,7 @@ window.setInterval(function () {
       if (playerAbility.barNum < 100 && playerAbility.type === "use") {
         playerAbility.barNum++;
       }
-    } else if (character === "robot") {
+    } else if (character === "robot" || character === "dog" || character === "cowboy") {
       if (playerAbility.barNum > 0 && playerAbility.type === "use") {
         playerAbility.barNum -= 0.5;
       }
@@ -725,11 +780,14 @@ window.setInterval(function () {
         if (playerAbilities[key].barNum < 100 && playerAbilities[key].type === "use") {
           playerAbilities[key].barNum++;
         }
-      } else if (playerDetails[key].character === "robot") {
+      } else if (playerDetails[key].character === "robot" || playerDetails[key].character === "dog" || playerDetails[key].character === "cowboy") {
         if (playerAbilities[key].barNum > 0 && playerAbilities[key].type === "use") {
           playerAbilities[key].barNum -= 0.5;
         } else if (playerAbilities[key].barNum <= 0 && playerAbilities[key].type === "use") {
           playerAbilities[key].type = "main"
+          if (playerDetails[key].character === "cowboy") {
+            speed = 200;
+          }
         }
       }
     }
@@ -760,8 +818,8 @@ $(document).ready(function () {
       socket.emit('joinedLobby', {id});
     }
   })
-  let characters = ["ninja", "robot"];
-  let characterAbilities = ["Teleportation", "Invincibility"]
+  let characters = ["ninja", "robot", "dog", "cowboy"];
+  let characterAbilities = ["Teleportation", "Invincibility", "Speed", "Slow"]
   let characterSelected = 0;
   $('#right').click(function () {
     if (!ready) {
@@ -772,7 +830,7 @@ $(document).ready(function () {
       }
       $('#characterImage').attr('src', `assets/${characters[characterSelected]}Idle.png`);
       $('#characterName').text(`${characters[characterSelected][0].toUpperCase() + characters[characterSelected].slice(1)}`)
-      $('#ability').text(`Special Ability: ${characterAbilities[characterSelected]}`);
+      $('#ability').html(`Special Ability:<br/>${characterAbilities[characterSelected]}`);
     }
   })
   $('#left').click(function () {
@@ -784,7 +842,7 @@ $(document).ready(function () {
       }
       $('#characterImage').attr('src', `assets/${characters[characterSelected]}Idle.png`);
       $('#characterName').text(`${characters[characterSelected][0].toUpperCase() + characters[characterSelected].slice(1)}`)
-      $('#ability').text(`Special Ability: ${characterAbilities[characterSelected]}`);
+      $('#ability').text(`Special Ability:\n${characterAbilities[characterSelected]}`);
 
     }
   })
